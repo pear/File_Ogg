@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<package version="1.0">
+    <name>File_Ogg</name>
+    <summary>Access Ogg bitstreams.</summary>
+    <description>
+        This package provides access to various media types inside an Ogg bitsream.
+    </description>
+    <maintainers>
+        <maintainer>
+            <user>djg</user>
+            <role>lead</role>
+            <name>David Jonathan Grant</name>
+            <email>david@davidjonathangrant.info</email>
+        </maintainer>
+        <maintainer>
+            <user>neufeind</user>
+            <role>helper</role>
+            <name>Stefan Neufeind</name>
+            <email>stefan@neufeind.net</email>
+        </maintainer>
+    </maintainers>
+    <release>
+        <version>0.1.2</version>
+        <date>2003-09-08</date>
+        <license>PHP License</license>
+        <state>alpha</state>
+        <notes>
+            This is a documentation release.  A great deal of documentation has now been added to this project, and can be extracted using phpdoc.
+        </notes>
+        <filelist>
+            <dir name="File" role="php">
+                <file role="php">Ogg.php</file>
+                <dir name="Ogg" role="php">
+                    <file>PEAR.php</file>
+                    <dir name="Vorbis" role="php">
+                        <file>PEAR.php</file>
+                    </dir>
+                </dir>
+            </dir>
+        </filelist>
+    </release>
+    <changelog>
+        <release>
+            <version>0.1.2</version>
+            <state>alpha</state>
+            <date>2003-09-09</date>
+            <notes>Extensive documentation for the majority of PHP elements.</notes>
+        </release>
+        <release>
+            <version>0.1.1</version>
+            <state>alpha</state>
+            <date>2003-09-02</date>
+            <notes>Bugfix release:  package was installing in the wrong location.</notes>
+        </release>
+        <release>
+            <version>0.1</version>
+            <state>alpha</state>
+            <date>2003-09-02</date>
+            <notes>The first release!</notes>
+        </release>
+    </changelog>
+    <deps>
+        <dep type="php" rel="ge" optional="no">4.1.0</dep>
+    </deps>
+</package>
