@@ -60,6 +60,6 @@
         </release>
     </changelog>
     <deps>
-        <dep type="php" rel="ge" optional="no">4.1.0</dep>
+        <dep type="php" rel="ge" version="4.1.0" optional="no" />
     </deps>
 </package>
