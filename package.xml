@@ -10,7 +10,7 @@
             <user>djg</user>
             <role>lead</role>
             <name>David Jonathan Grant</name>
-            <email>david@davidjonathangrant.info</email>
+            <email>david@grant.org.uk</email>
         </maintainer>
         <maintainer>
             <user>neufeind</user>
@@ -20,12 +20,12 @@
         </maintainer>
     </maintainers>
     <release>
-        <version>0.1.2</version>
-        <date>2003-09-08</date>
+        <version>0.1.2.1</version>
+        <date>2005-09-21</date>
         <license>PHP License</license>
         <state>alpha</state>
         <notes>
-            This is a documentation release.  A great deal of documentation has now been added to this project, and can be extracted using phpdoc.
+            Package.xml changes.
         </notes>
         <filelist>
             <dir name="File" role="php">
@@ -40,6 +40,12 @@
         </filelist>
     </release>
     <changelog>
+	<release>
+		    <version>0.1.2.1</version>
+		    <state>alpha</state>
+		    <date>2005-09-21</date>
+		    <notes>Change to package.xml.</notes>
+        </release>
         <release>
             <version>0.1.2</version>
             <state>alpha</state>
