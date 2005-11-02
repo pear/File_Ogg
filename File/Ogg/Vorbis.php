@@ -12,13 +12,8 @@
 // | obtain it through the world-wide-web, please send a note to          |
 // | license@php.net so we can mail you a copy immediately.               |
 // +----------------------------------------------------------------------+
-// | Author: David Grant <david@davidjonathangrant.info>                  |
+// | Author: David Grant <david@grant.org.uk>                  |
 // +----------------------------------------------------------------------+
-
-/**
- * @author David Grant <david@davidjonathangrant.info>
- * @package File_Ogg
- */
 
 /**
  *  Check number for the first header in a Vorbis stream.
@@ -57,7 +52,7 @@ define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
  * @access  public
  * @package File_Ogg
  */
-class File_Ogg_Vorbis_Pear
+class File_Ogg_Vorbis extends File_Ogg_Stream
 {
     /**
      * Array to hold each of the comments.
@@ -132,14 +127,6 @@ class File_Ogg_Vorbis_Pear
     var $_vendor;
 
     /**
-     * The serial number of this logical stream.
-     *
-     * @var     int
-     * @access  private
-     */
-    var $_streamSerial;
-
-    /**
      * The length of this stream in seconds.
      *
      * @var     int
@@ -155,7 +142,6 @@ class File_Ogg_Vorbis_Pear
      */
     var $_streamSize;
 
-
     /**
      * Constructor for accessing a Vorbis logical stream.
      *
@@ -168,22 +154,21 @@ class File_Ogg_Vorbis_Pear
      * @param   pointer $filePointer    File pointer for the current physical stream.
      * @access  public
      */
-    function File_Ogg_Vorbis_Pear($streamSerial, $streamData, $filePointer)
-    {
-        $this->_streamSerial = $streamSerial;
-        $this->_streamList = $streamData;
-        $this->_filePointer = $filePointer;
+	function File_Ogg_Vorbis($streamSerial, $streamData, $filePointer)
+	{
+        $this->_streamSerial 	= $streamSerial;
+        $this->_streamList 		= $streamData;
+        $this->_filePointer 	= $filePointer;
         $this->_parseIdentificationHeader();
         $this->_parseCommentsHeader();
-        $this->_streamLength = $streamData['stream_page'][count($streamData['stream_page']) - 1]['abs_granual_pos'] / $this->_sampleRate;
+        $this->_streamLength 	= $streamData['stream_page'][count($streamData['stream_page']) - 1]['abs_granual_pos'] / $this->_sampleRate;
         // This gives an accuracy of approximately 99.7% to the streamsize of ogginfo.
         for ($i = 0; $i < count($streamData['stream_page']); ++$i)
-        {
             $this->_streamSize += $streamData['stream_page'][$i]['data_length'];
-        }
-        $this->_avgBitrate = ($this->_streamSize * 8) / $this->_streamLength;
-    }
 
+        $this->_avgBitrate 		= ($this->_streamSize * 8) / $this->_streamLength;
+	}
+	
     /**
      * Parse the identification header (the first of three headers) in a Vorbis stream.
      *
@@ -193,52 +178,48 @@ class File_Ogg_Vorbis_Pear
      * specification to ensure the stream is pure.
      *
      * @access  private
+      
      */
     function _parseIdentificationHeader()
     {
         fseek($this->_filePointer, $this->_streamList['stream_page'][0]['body_offset'], SEEK_SET);
         // Check if this is the correct header.
-        $packet = unpack("C1data", fread($this->_filePointer, 1));
-        if ($packet['data'] != OGG_VORBIS_IDENTIFICATION_HEADER) {
+        $packet = unpack("Cdata", fread($this->_filePointer, 1));
+        if ($packet['data'] != OGG_VORBIS_IDENTIFICATION_HEADER)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
 
         // Check that this stream is a Vorbis stream.
-        if (fread($this->_filePointer, 6) != "vorbis") {
+        if (fread($this->_filePointer, 6) != "vorbis")
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
 
-        $version = unpack("V1data", fread($this->_filePointer, 4));
+        $version = unpack("Vdata", fread($this->_filePointer, 4));
         // The Vorbis stream version must be 0.
-        if ($version['data'] != 0) {
+        if ($version['data'] != 0)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        } else {
+        else
             $this->_version = $version['data'];
-        }
 
-        $channels = unpack("C1data", fread($this->_filePointer, 1));
+        $channels = unpack("Cdata", fread($this->_filePointer, 1));
         // The number of channels MUST be greater than 0.
-        if ($channels['data'] <= 0) {
+        if ($channels['data'] <= 0)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        } else {
+        else
             $this->_channels = $channels['data'];
-        }
 
         $sample_rate = unpack("V1data", fread($this->_filePointer, 4));
         // The sample rate MUST be greater than 0.
-        if ($sample_rate['data'] <= 0) {
+        if ($sample_rate['data'] <= 0)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        } else {
+        else
             $this->_sampleRate = $sample_rate['data'];
-        }
 
         // Extract the various bitrates from the vorbis stream.
-        $bitrate['max'] = unpack("V1data", fread($this->_filePointer, 4));
-        $this->_maxBitrate = $bitrate['max']['data'];
-        $bitrate['nom'] = unpack("V1data", fread($this->_filePointer, 4));
-        $this->_nomBitrate = $bitrate['nom']['data'];
-        $bitrate['min'] = unpack("V1data", fread($this->_filePointer, 4));
-        $this->_minBitrate = $bitrate['min']['data'];
+        $bitrate['max'] 	= unpack("Vdata", fread($this->_filePointer, 4));
+        $this->_maxBitrate 	= $bitrate['max']['data'];
+        $bitrate['nom'] 	= unpack("Vdata", fread($this->_filePointer, 4));
+        $this->_nomBitrate 	= $bitrate['nom']['data'];
+        $bitrate['min'] 	= unpack("Vdata", fread($this->_filePointer, 4));
+        $this->_minBitrate 	= $bitrate['min']['data'];
 
         $blocksize = unpack("C1data", fread($this->_filePointer, 1));
 
@@ -246,26 +227,24 @@ class File_Ogg_Vorbis_Pear
 
         // blocksize_0 MUST be a valid blocksize.
         $blocksize[0] = pow(2, ($blocksize['data'] & 0x0F));
-        if (FALSE == in_array($blocksize[0], $valid_block_sizes)) {
+        if (FALSE == in_array($blocksize[0], $valid_block_sizes))
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
+
         // blocksize_1 MUST be a valid blocksize.
         $blocksize[1] = pow(2, ($blocksize['data'] & 0xF0) >> 4);
-        if (FALSE == in_array($blocksize[1], $valid_block_sizes)) {
+        if (FALSE == in_array($blocksize[1], $valid_block_sizes))
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
+
         // blocksize_0 MUST be less than or equal to blocksize_1.
-        if ($blocksize[1] < $blocksize[0]) {
+        if ($blocksize[1] < $blocksize[0])
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
 
         // The framing bit MUST be set to mark the end of the identification header.
         $framing_bit = unpack("C1data", fread($this->_filePointer, 1));
-        if ($framing_bit['data'] != 1) {
+        if ($framing_bit['data'] != 1)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
     }
-
+    
     /**
      * Parse the comments header (the second of three headers) of a Vorbis stream.
      *
@@ -281,29 +260,28 @@ class File_Ogg_Vorbis_Pear
     {
         fseek($this->_filePointer, $this->_streamList['stream_page'][1]['body_offset'], SEEK_SET);
         // Check if this is the correct header.
-        $packet = unpack("C1data", fread($this->_filePointer, 1));
+        $packet = unpack("Cdata", fread($this->_filePointer, 1));
         if ($packet['data'] != OGG_VORBIS_COMMENTS_HEADER) {
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
             exit ("ERROR");
         }
 
         // Check that this stream is a Vorbis stream.
-        if (fread($this->_filePointer, 6) != "vorbis") {
+        if (fread($this->_filePointer, 6) != "vorbis")
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
 
         // Decode the vendor string length.
-        $vendor_len = unpack("V1data", fread($this->_filePointer, 4));
-        $this->_vendor = fread($this->_filePointer, $vendor_len['data']);
+        $vendor_len 	= unpack("Vdata", fread($this->_filePointer, 4));
+        $this->_vendor 	= fread($this->_filePointer, $vendor_len['data']);
         // Decode the size of the comments list.
-        $comment_list_length = unpack("V1data", fread($this->_filePointer, 4));
+        $comment_list_length = unpack("Vdata", fread($this->_filePointer, 4));
         for ($i = 0; $i < $comment_list_length['data']; $i++) {
-            $comment_length = unpack("V1data", fread($this->_filePointer, 4));
+            $comment_length = unpack("Vdata", fread($this->_filePointer, 4));
             // Comments are in the format 'ARTIST=Super Furry Animals', so split it on the equals character.
             // NOTE: Equals characters are strictly prohibited in either the COMMENT or DATA parts.
-            $comment = explode("=", fread($this->_filePointer, $comment_length['data']));
-            $comment_title = (string) $comment[0];
-            $comment_value = (string) utf8_decode($comment[1]);
+            $comment 		= explode("=", fread($this->_filePointer, $comment_length['data']));
+            $comment_title 	= (string) $comment[0];
+            $comment_value 	= (string) utf8_decode($comment[1]);
 
             // Check if the comment type (e.g. ARTIST) already exists.  If it does,
             // take the new value, and the existing value (or array) and insert it
@@ -311,23 +289,20 @@ class File_Ogg_Vorbis_Pear
             // multiple instances (e.g. ARTIST for a collaboration) and we should not
             // overwrite the previous value.
             if (isset($this->_comments[$comment_title])) {
-                if (is_array($this->_comments[$comment_title])) {
+                if (is_array($this->_comments[$comment_title]))
                     $this->_comments[$comment_title][] = $comment_value;
-                } else {
+                else
                     $this->_comments[$comment_title] = array($this->_comments[$comment_title], $comment_value);
-                }
-            } else {
+            } else
                 $this->_comments[$comment_title] = $comment_value;
-            }
         }
 
         // The framing bit MUST be set to mark the end of the comments header.
-        $framing_bit = unpack("C1data", fread($this->_filePointer, 1));
-        if ($framing_bit['data'] != 1) {
+        $framing_bit = unpack("Cdata", fread($this->_filePointer, 1));
+        if ($framing_bit['data'] != 1)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        }
     }
-
+    
     /**
      * Provides a list of the comments extracted from the Vorbis stream.
      *
@@ -355,38 +330,19 @@ class File_Ogg_Vorbis_Pear
      * in the situation where a track is a duet.
      *
      * @param   string  $commentTitle   Comment title to search for, e.g. TITLE.
-     * @return  mixed
+     * @return  string
      * @access  public
      */
     function getComment($commentTitle)
     {
-        if (isset($this->_comments[$commentTitle]))	{
-            if (is_array($this->_comments[$commentTitle])) {
+        if (isset($this->_comments[$commentTitle])) {
+            if (is_array($this->_comments[$commentTitle]))
                 return (implode(", ", $this->_comments[$commentTitle]));
-            } else {
+            else
                 return ($this->_comments[$commentTitle]);
-            }
-        }
-        else
-        {
+        } else
             // The comment doesn't exist in this file.  The user should've called getCommentList first.
-            PEAR::raiseError("Invalid Comment.", OGG_VORBIS_ERROR_INVALID_COMMENT);
-        }
-    }
-
-    /**
-     * Gives the serial number of this stream.
-     *
-     * The stream serial number is of fairly academic importance, as it makes little
-     * difference to the end user.  The serial number is used by the Ogg physical
-     * stream to distinguish between concurrent logical streams.
-     *
-     * @return  int
-     * @access  public
-     */
-    function getSerial()
-    {
-        return ($this->_streamSerial);
+            return "";
     }
 
     /**
@@ -461,13 +417,12 @@ class File_Ogg_Vorbis_Pear
      */
     function getBitrate()
     {
-        if ($this->_avgBitrate != 0) {
+        if ($this->_avgBitrate != 0)
             return ($this->_avgBitrate);
-        } elseif ($this->_nomBitrate != 0) {
+        elseif ($this->_nomBitrate != 0)
             return ($this->_nomBitrate);
-        } else{
+        else
             return (($this->_minBitrate + $this->_maxBitrate) / 2);
-        }
     }
 
     /**
