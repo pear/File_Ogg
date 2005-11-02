@@ -18,6 +18,7 @@
 /**
  * @author David Grant <david@grant.org.uk>
  * @package File_Ogg
+ * @version CVS: $Id$
  */
 class File_Ogg_Flac
 {

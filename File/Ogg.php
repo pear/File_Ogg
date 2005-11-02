@@ -16,8 +16,10 @@
 // +----------------------------------------------------------------------+
 
 /**
- * @author David Grant <david@grant.org.uk>
- * @package File_Ogg
+ * @author 		David Grant <david@grant.org.uk>
+ * @category	File
+ * @package 	File_Ogg
+ * @version 	CVS: $Id$
  */
 
 require_once('PEAR.php');
@@ -151,7 +153,8 @@ class File_Ogg
             return (FALSE);
 
         $header_flag 		= unpack("cdata", substr($pageData, 5, 1));
-        $abs_granual_pos 	= unpack("Idata", substr($pageData, 6, 8));
+        $abs_granual_pos 	= unpack("Vdata", substr($pageData, 6, 8));
+        var_dump($abs_granual_pos);
         // Serial number for the current datastream.
         $stream_serial 		= unpack("Vdata", substr($pageData, 14, 4));
         $page_sequence 		= unpack("Vdata", substr($pageData, 18, 4));
@@ -212,7 +215,6 @@ class File_Ogg
                 $this->_decodePageHeader($stream_pages[$i], $this_page_offset, $next_page_offset - 1);
             }
             fseek($this->_filePointer, $next_page_offset, SEEK_SET);
-            break;
         }
         // Loop through the streams, and find out what type of stream is available.
         foreach ($this->_streamList as $stream_serial => $pages) {
@@ -278,14 +280,18 @@ class File_Ogg
     {
         $streams = array();
         foreach ($this->_streamList as $stream_serial => $stream) {
-        	if (is_null($type) || $stream['stream_type'] == $type)
-	            $streams[$stream_serial] = $stream['stream_type'];
+        	if (! isset($streams[$stream['stream_type']]))
+        		$streams[$stream['stream_type']] = array();
+        		
+        	$streams[$stream['stream_type']][] = $stream_serial;
         }
 
-        return ($streams);
+        if (is_null($type))
+        	return ($streams);
+        elseif (isset($streams[$type]))
+        	return ($streams[$type]);
+        else
+        	return array();
     }
 }
-$ogg	= new File_Ogg("C:\Documents and Settings\David Grant\Desktop\Epoq-Lepidoptera.ogg");
-if ($ogg->hasStream(OGG_STREAM_VORBIS))
-	var_dump($ogg->listStreams());
 ?>

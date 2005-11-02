@@ -15,6 +15,8 @@
 // | Author: David Grant <david@grant.org.uk>                  |
 // +----------------------------------------------------------------------+
 
+require_once('File/Ogg/Stream.php');
+
 /**
  *  Check number for the first header in a Vorbis stream.
  */
@@ -48,9 +50,11 @@ define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
  * @link    http://www.xiph.org/ogg/vorbis/docs.html
  * @link    http://www.xiph.org/ogg/vorbis/doc/vorbis-ogg.html
  *
- * @see     File_Ogg_Pear
- * @access  public
- * @package File_Ogg
+ * @see     	File_Ogg_Pear
+ * @access  	public
+ * @category	File
+ * @package 	File_Ogg
+ * @version 	CVS: $Id$
  */
 class File_Ogg_Vorbis extends File_Ogg_Stream
 {
@@ -161,12 +165,12 @@ class File_Ogg_Vorbis extends File_Ogg_Stream
         $this->_filePointer 	= $filePointer;
         $this->_parseIdentificationHeader();
         $this->_parseCommentsHeader();
-        $this->_streamLength 	= $streamData['stream_page'][count($streamData['stream_page']) - 1]['abs_granual_pos'] / $this->_sampleRate;
+        $this->_streamLength 	= round($streamData['stream_page'][count($streamData['stream_page']) - 1]['abs_granual_pos'] / $this->_sampleRate);
         // This gives an accuracy of approximately 99.7% to the streamsize of ogginfo.
         for ($i = 0; $i < count($streamData['stream_page']); ++$i)
             $this->_streamSize += $streamData['stream_page'][$i]['data_length'];
 
-        $this->_avgBitrate 		= ($this->_streamSize * 8) / $this->_streamLength;
+        $this->_avgBitrate 		= round(($this->_streamSize * 8) / $this->_streamLength);
 	}
 	
     /**
@@ -188,28 +192,32 @@ class File_Ogg_Vorbis extends File_Ogg_Stream
         if ($packet['data'] != OGG_VORBIS_IDENTIFICATION_HEADER)
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
 
-        // Check that this stream is a Vorbis stream.
+        // The following six characters should be the characters 'v', 'o', 'r', 'b', 'i', 's'.
         if (fread($this->_filePointer, 6) != "vorbis")
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+            PEAR::raiseError("Stream is undecodable due to a malformed header.", OGG_VORBIS_ERROR_UNDECODABLE);
 
         $version = unpack("Vdata", fread($this->_filePointer, 4));
-        // The Vorbis stream version must be 0.
-        if ($version['data'] != 0)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        else
-            $this->_version = $version['data'];
 
+        // The Vorbis stream version must be 0.
+        if ($version['data'] == 0)
+        	$this->_version = $version['data'];
+        else
+            PEAR::raiseError("Stream is undecodable due to an invalid vorbis stream version.", OGG_VORBIS_ERROR_UNDECODABLE);
+
+        // The number of channels is stored in an 8 bit unsigned integer,
+        // with a maximum of 255 channels.
         $channels = unpack("Cdata", fread($this->_filePointer, 1));
         // The number of channels MUST be greater than 0.
-        if ($channels['data'] <= 0)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        if ($channels['data'] == 0)
+            PEAR::raiseError("Stream is undecodable due to zero channels.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
             $this->_channels = $channels['data'];
 
-        $sample_rate = unpack("V1data", fread($this->_filePointer, 4));
+		// The sample rate is a 32 bit unsigned integer.
+        $sample_rate = unpack("Vdata", fread($this->_filePointer, 4));
         // The sample rate MUST be greater than 0.
-        if ($sample_rate['data'] <= 0)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        if ($sample_rate['data'] == 0)
+            PEAR::raiseError("Stream is undecodable due to a zero sample rate.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
             $this->_sampleRate = $sample_rate['data'];
 
@@ -221,28 +229,31 @@ class File_Ogg_Vorbis extends File_Ogg_Stream
         $bitrate['min'] 	= unpack("Vdata", fread($this->_filePointer, 4));
         $this->_minBitrate 	= $bitrate['min']['data'];
 
-        $blocksize = unpack("C1data", fread($this->_filePointer, 1));
+        $blocksizes = unpack("Cdata", fread($this->_filePointer, 1));
 
+        // Powers of two between 6 and 13 inclusive.
         $valid_block_sizes = array(64, 128, 256, 512, 1024, 2048, 4096, 8192);
 
+        // Extract bits 1 to 4 from the character data.
         // blocksize_0 MUST be a valid blocksize.
-        $blocksize[0] = pow(2, ($blocksize['data'] & 0x0F));
-        if (FALSE == in_array($blocksize[0], $valid_block_sizes))
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        $blocksize_0 = pow(2, ($blocksizes['data'] & 0x0F));
+        if (FALSE == in_array($blocksize_0, $valid_block_sizes))
+            PEAR::raiseError("Stream is undecodable because blocksize_0 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
 
+        // Extract bits 5 to 8 from the character data.
         // blocksize_1 MUST be a valid blocksize.
-        $blocksize[1] = pow(2, ($blocksize['data'] & 0xF0) >> 4);
-        if (FALSE == in_array($blocksize[1], $valid_block_sizes))
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        $blocksize_1 = pow(2, ($blocksizes['data'] & 0xF0) >> 4);
+        if (FALSE == in_array($blocksize_1, $valid_block_sizes))
+            PEAR::raiseError("Stream is undecodable because blocksize_1 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
 
-        // blocksize_0 MUST be less than or equal to blocksize_1.
-        if ($blocksize[1] < $blocksize[0])
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        // blocksize 0 MUST be less than or equal to blocksize 1.
+        if ($blocksize_0 > $blocksize_1)
+            PEAR::raiseError("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.", OGG_VORBIS_ERROR_UNDECODABLE);
 
         // The framing bit MUST be set to mark the end of the identification header.
-        $framing_bit = unpack("C1data", fread($this->_filePointer, 1));
-        if ($framing_bit['data'] != 1)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+        $framing_bit = unpack("Cdata", fread($this->_filePointer, 1));
+        if ($framing_bit['data'] == 0)
+            PEAR::raiseError("Stream in undecodable because the framing bit is not non-zero.", OGG_VORBIS_ERROR_UNDECODABLE);
     }
     
     /**
@@ -445,6 +456,16 @@ class File_Ogg_Vorbis extends File_Ogg_Stream
     function getLength()
     {
         return ($this->_streamLength);
+    }
+    
+    function isMono()
+    {
+    	return $this->_channels == 1;
+    }
+    
+    function isStereo()
+    {
+    	return $this->_channels == 2;
     }
 }
 ?>
