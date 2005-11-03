@@ -1,45 +1,46 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <package version="1.0">
     <name>File_Ogg</name>
-    <summary>Access Ogg bitstreams.</summary>
+    <summary>This package provides access to logical bitstreams packaged within an ogg file.</summary>
     <description>
-        This package provides access to various media types inside an Ogg bitsream.
+        This package provides access to various media types inside an Ogg bitsream.  Currently only metadata retrieval from Vorbis audio is available.
     </description>
     <maintainers>
         <maintainer>
             <user>djg</user>
             <role>lead</role>
-            <name>David Jonathan Grant</name>
+            <name>David Grant</name>
             <email>david@grant.org.uk</email>
-        </maintainer>
-        <maintainer>
-            <user>neufeind</user>
-            <role>helper</role>
-            <name>Stefan Neufeind</name>
-            <email>stefan@neufeind.net</email>
         </maintainer>
     </maintainers>
     <release>
-        <version>0.1.3</version>
-        <date>2005-09-21</date>
-        <license>PHP License</license>
-        <state>alpha</state>
+        <version>0.2.0</version>
+        <date>2005-11-03</date>
+        <license>GNU GPL</license>
+        <state>beta</state>
         <notes>
-            Package.xml changes.
+            There have been a few API changes since the last release, so if your system depends on this package, please ensure it isn't left broken.
         </notes>
         <filelist>
             <dir name="File" role="php">
                 <file role="php">Ogg.php</file>
                 <dir name="Ogg" role="php">
-                    <file>PEAR.php</file>
-                    <dir name="Vorbis" role="php">
-                        <file>PEAR.php</file>
-                    </dir>
+                    <file>Bitstream.php</file>
+                    <file>Flac.php</file>
+                    <file>Speex.php</file>
+                    <file>Theora.php</file>
+                    <file>Vorbis.php</file>
                 </dir>
             </dir>
         </filelist>
     </release>
     <changelog>
+		<release>
+		    <version>0.2</version>
+		    <state>beta</state>
+		    <date>2005-11-03</date>
+		    <notes>Updated to beta.</notes>
+        </release>
 		<release>
 		    <version>0.1.3</version>
 		    <state>alpha</state>
