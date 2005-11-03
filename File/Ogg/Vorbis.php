@@ -1,4 +1,5 @@
 <?php
+/* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +--------------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                             |
 // | Copyright (c) 2005 David Grant <david@grant.org.uk>                            |
@@ -18,7 +19,7 @@
 // | Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.|
 // +--------------------------------------------------------------------------------+
 
-require_once('File/Ogg/Stream.php');
+require_once('File/Ogg/Bitstream.php');
 
 /**
  *  Check number for the first header in a Vorbis stream.
@@ -53,14 +54,15 @@ define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
  * @link    http://www.xiph.org/ogg/vorbis/docs.html
  * @link    http://www.xiph.org/ogg/vorbis/doc/vorbis-ogg.html
  *
- * @see     	File_Ogg_Pear
- * @access  	public
+ * @author 		David Grant <david@grant.org.uk>
  * @category	File
  * @copyright 	David Grant <david@grant.org.uk>
+ * @license		http://www.gnu.org/copyleft/gpl.html GNU GPL
+ * @link		http://pear.php.net/package/File_Ogg
  * @package 	File_Ogg
  * @version 	CVS: $Id$
  */
-class File_Ogg_Vorbis extends File_Ogg_Stream
+class File_Ogg_Vorbis extends File_Ogg_Bitstream
 {
     /**
      * Array to hold each of the comments.

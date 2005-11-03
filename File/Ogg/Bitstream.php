@@ -1,4 +1,5 @@
 <?php
+/* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +--------------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                             |
 // | Copyright (c) 2005 David Grant <david@grant.org.uk>                            |
@@ -19,12 +20,15 @@
 // +--------------------------------------------------------------------------------+
 
 /**
+ * @author 		David Grant <david@grant.org.uk>
  * @category	File
  * @copyright 	David Grant <david@grant.org.uk>
+ * @license		http://www.gnu.org/copyleft/gpl.html GNU GPL
+ * @link		http://pear.php.net/package/File_Ogg
  * @package 	File_Ogg
  * @version 	CVS: $Id$
  */
-class File_Ogg_Stream
+class File_Ogg_Bitstream
 {
     /**
      * The serial number of this logical stream.
