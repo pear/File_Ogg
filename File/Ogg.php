@@ -117,23 +117,13 @@ class File_Ogg
     /**
      * Returns an interface to an Ogg physical stream.
      *
-     * This method acts as an interface to switch between the PECL and native-PHP
-     * versions of this package.  At the time of writing, there is no PECL version
-     * so this class simply passes onto File_Ogg_PEAR.  The aforementioned file
-     * can be called directly, but the author strongly recommends against this.
+     * This method takes the path to a local file and examines it for a physical
+     * ogg bitsream.  After instantiation, the user should query the object for
+     * the logical bitstreams held within the ogg container.
      *
-     * @see     File_Ogg_Pear
      * @access  public
      * @param   string  $fileLocation   The path of the file to be examined.
-     * @return  object  File_Ogg_Pear
-     * @deprecated
      */
-    function openFile($fileLocation)
-    {
-        require_once("File/Ogg/PEAR.php");
-        return (new File_Ogg_PEAR($fileLocation));
-    }
-    
     function File_Ogg($fileLocation)
     {
         clearstatcache();
@@ -149,6 +139,9 @@ class File_Ogg
             PEAR::raiseError("Couldn't Open File.  Check File Permissions.", OGG_ERROR_INVALID_FILE);
     }
     
+    /**
+     * @access 	private
+     */
     function _decodePageHeader($pageData, $pageOffset, $pageFinish)
     {
         // Extract the various bits and pieces found in each packet header.
@@ -185,6 +178,9 @@ class File_Ogg
         return (TRUE);
     }
     
+    /**
+     *	@access 	private
+     */
     function _splitStreams()
     {
         // Loop through the physical stream until there are no more pages to read.
@@ -241,7 +237,14 @@ class File_Ogg
     }
     
     /**
-     * @return File_Ogg_Stream
+     * Returns the appropriate logical bitstream that corresponds to the provided serial.
+     *
+     * This function returns a logical bitstream contained within the ogg physical
+     * stream, corresponding to the serial used as the offset for that bitstream.
+     * The returned stream may be Vorbis, Speex, FLAC or Theora, although the only
+     * usable bitstream is Vorbis.
+     *
+     * @return File_Ogg_Bitstream
      */
     function getStream($streamSerial)
     {
@@ -274,6 +277,15 @@ class File_Ogg
         return false;
     }
     
+    /**
+     * This function returns true if a logical bitstream of the requested type can be found.
+     *
+     * This function checks the contents of this ogg physical bitstream for of logical
+     * bitstream corresponding to the supplied type.  If one is found, the function returns
+     * true, otherwise it return false.
+     *
+     * @param 	int		$streamType
+     */
     function hasStream($streamType)
     {
         foreach ($this->_streamList as $stream) {
@@ -283,7 +295,16 @@ class File_Ogg
         return (false);
     }
     
-    function listStreams($type = null)
+    /**
+     * Returns an array of logical streams inside this physical bitstream.
+     *
+     * This function returns an array of logical streams found within this physical
+     * bitstream.  If a filter is provided, only logical streams of the requested type
+     * are returned, as an array of serial numbers.  If no filter is provided, this
+     * function returns a two-dimensional array, with the stream type as the primary key,
+     * and a value consisting of an array of stream serial numbers.
+     */
+    function listStreams($filter = null)
     {
         $streams = array();
         foreach ($this->_streamList as $stream_serial => $stream) {
@@ -293,10 +314,10 @@ class File_Ogg
         	$streams[$stream['stream_type']][] = $stream_serial;
         }
 
-        if (is_null($type))
+        if (is_null($filter))
         	return ($streams);
-        elseif (isset($streams[$type]))
-        	return ($streams[$type]);
+        elseif (isset($streams[$filter]))
+        	return ($streams[$filter]);
         else
         	return array();
     }

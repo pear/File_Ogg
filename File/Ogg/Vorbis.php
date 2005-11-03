@@ -464,11 +464,21 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
         return ($this->_streamLength);
     }
     
+    /**
+     * States whether this logical stream was encoded in mono.
+     *
+     * @return	boolean
+     */
     function isMono()
     {
     	return $this->_channels == 1;
     }
     
+    /**
+     * States whether this logical stream was encoded in stereo.
+     *
+     * @return	boolean
+     */
     function isStereo()
     {
     	return $this->_channels == 2;
