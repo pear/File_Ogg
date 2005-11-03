@@ -169,8 +169,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
         $this->_streamSerial 	= $streamSerial;
         $this->_streamList 		= $streamData;
         $this->_filePointer 	= $filePointer;
-        $this->_parseIdentificationHeader();
-        $this->_parseCommentsHeader();
+        $this->_decodeIdentificationHeader();
+        $this->_decodeCommentsHeader();
         $this->_streamLength 	= round($streamData['stream_page'][count($streamData['stream_page']) - 1]['abs_granual_pos'] / $this->_sampleRate);
         // This gives an accuracy of approximately 99.7% to the streamsize of ogginfo.
         for ($i = 0; $i < count($streamData['stream_page']); ++$i)
@@ -190,17 +190,9 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * @access  private
       
      */
-    function _parseIdentificationHeader()
+    function _decodeIdentificationHeader()
     {
-        fseek($this->_filePointer, $this->_streamList['stream_page'][0]['body_offset'], SEEK_SET);
-        // Check if this is the correct header.
-        $packet = unpack("Cdata", fread($this->_filePointer, 1));
-        if ($packet['data'] != OGG_VORBIS_IDENTIFICATION_HEADER)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-
-        // The following six characters should be the characters 'v', 'o', 'r', 'b', 'i', 's'.
-        if (fread($this->_filePointer, 6) != "vorbis")
-            PEAR::raiseError("Stream is undecodable due to a malformed header.", OGG_VORBIS_ERROR_UNDECODABLE);
+    	$this->_decodeCommonHeader(OGG_VORBIS_IDENTIFICATION_HEADER, 0);
 
         $version = unpack("Vdata", fread($this->_filePointer, 4));
 
@@ -262,6 +254,19 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
             PEAR::raiseError("Stream in undecodable because the framing bit is not non-zero.", OGG_VORBIS_ERROR_UNDECODABLE);
     }
     
+    function _decodeCommonHeader($packetType, $pageOffset)
+    {
+        fseek($this->_filePointer, $this->_streamList['stream_page'][$pageOffset]['body_offset'], SEEK_SET);
+        // Check if this is the correct header.
+        $packet = unpack("Cdata", fread($this->_filePointer, 1));
+        if ($packet['data'] != $packetType)
+            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
+
+        // The following six characters should be the characters 'v', 'o', 'r', 'b', 'i', 's'.
+        if (fread($this->_filePointer, 6) != "vorbis")
+            PEAR::raiseError("Stream is undecodable due to a malformed header.", OGG_VORBIS_ERROR_UNDECODABLE);
+    }
+    
     /**
      * Parse the comments header (the second of three headers) of a Vorbis stream.
      *
@@ -273,20 +278,10 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * @link    http://www.xiph.org/ogg/vorbis/doc/v-comment.html
      * @access  private
      */
-    function _parseCommentsHeader()
+    function _decodeCommentsHeader()
     {
-        fseek($this->_filePointer, $this->_streamList['stream_page'][1]['body_offset'], SEEK_SET);
-        // Check if this is the correct header.
-        $packet = unpack("Cdata", fread($this->_filePointer, 1));
-        if ($packet['data'] != OGG_VORBIS_COMMENTS_HEADER) {
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-            exit ("ERROR");
-        }
-
-        // Check that this stream is a Vorbis stream.
-        if (fread($this->_filePointer, 6) != "vorbis")
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-
+    	$this->_decodeCommonHeader(OGG_VORBIS_COMMENTS_HEADER, 1);
+            
         // Decode the vendor string length.
         $vendor_len 	= unpack("Vdata", fread($this->_filePointer, 4));
         $this->_vendor 	= fread($this->_filePointer, $vendor_len['data']);
@@ -350,7 +345,7 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * @return  string
      * @access  public
      */
-    function getComment($commentTitle)
+    function getField($commentTitle)
     {
         if (isset($this->_comments[$commentTitle])) {
             if (is_array($this->_comments[$commentTitle]))
@@ -372,7 +367,7 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * @return  int
      * @access  public
      */
-    function getVersion()
+    function getEncoderVersion()
     {
         return ($this->_version);
     }
@@ -482,6 +477,133 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function isStereo()
     {
     	return $this->_channels == 2;
+    }
+    
+    /**
+     * The title of this track, e.g. "What's Up Pussycat?".
+     *
+     * @return string
+     */
+    function getTitle()
+    {
+    	return $this->getField("TITLE");
+    }
+    
+    /**
+     * The version of the track, such as a remix.
+     *
+     * @return 	string
+     */
+    function getVersion()
+    {
+    	return $this->getField("VERSION");
+    }
+    
+    /**
+     * The album from which this track comes.
+     *
+     * @return 	string
+     */
+    function getAlbum()
+    {
+    	return $this->getField("ALBUM");
+    }
+    
+    /**
+     * The number of this track if it is part of a larger collection.
+     */
+    function getTrackNumber()
+    {
+    	return $this->getField("TRACKNUMBER");
+    }
+    
+    /**
+     * The artist responsible for this track.
+     *
+     * @return	string
+     */
+    function getArtist()
+    {
+    	return $this->getField("ARTIST");
+    }
+    
+    /**
+     * The performer of this track, such as an orchestra
+     *
+     * @return 	string
+     */
+    function getPerformer()
+    {
+    	return $this->getField("PERFORMER");
+    }
+    
+    /**
+     * The copyright attribution for this track.
+     *
+     * @return	string
+     */
+    function getCopyright()
+    {
+    	return $this->getField("COPYRIGHT");
+    }
+    
+    /**
+     * The rights of distribution for this track.
+     *
+     * @return 	string
+     */
+    function getLicense()
+    {
+    	return $this->getField("LICENSE");
+    }
+    
+    /**
+     * The name of the organisation producing this track, such
+     * as a record label.
+     *
+     * @return 	string
+     */
+    function getOrganization()
+    {
+    	return $this->getField("ORGANIZATION");
+    }
+    
+    /**
+     * A short description of the contents of this track.
+     *
+     * @return	string
+     */
+    function getDescription()
+    {
+    	return $this->getField("DESCRIPTION");
+    }
+    
+    /**
+     *
+     */
+    function getGenre()
+    {
+    	return $this->getField("GENRE");
+    }
+    
+    function getDate()
+    {
+    	return $this->getField("DATE");
+    }
+    
+    function getLocation()
+    {
+    	return $this->getField("LOCATION");
+    }
+    
+    function getContact()
+    {
+    	return $this->getField("CONTACT");
+    }
+    
+    function getIsrc()
+    {
+    	return $this->getField("ISRC");
     }
 }
 ?>

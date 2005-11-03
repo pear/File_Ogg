@@ -30,7 +30,7 @@
  */
 
 require_once('PEAR.php');
-require_once('File/Ogg/Stream.php');
+require_once('File/Ogg/Bitstream.php');
 
 define("OGG_STREAM_VORBIS",		1);
 define("OGG_STREAM_THEORA", 	2);
@@ -66,26 +66,22 @@ define("OGG_STREAM_CAPTURE_THEORA", "theora");
 /**
  * Error thrown if the file location passed is nonexistant or unreadable.
  */
-define("OGG_ERROR_INVALID_FILE", 1);
+define("OGG_ERROR_INVALID_FILE",	1);
 /**
  * Error thrown if the user attempts to extract an unsupported logical stream.
  */
-define("OGG_ERROR_UNSUPPORTED",	2);
+define("OGG_ERROR_UNSUPPORTED",		2);
 /**
  * Error thrown if the user attempts to extract an logical stream with no
  * corresponding serial number.
  */
-define("OGG_ERROR_BAD_SERIAL", 3);
+define("OGG_ERROR_BAD_SERIAL", 		3);
 
 /**
- * Factory class for providing either a PEAR or PECL interface to an Ogg stream.
+ * Class for parsing a ogg bitstream.
  *
- * Due to the widespread availability of libraries from Xiph.Org, it is anticipated
- * that a PECL version of this package will become available in the not-too-distant
- * future. This class will provide a switch between the two modes if the PECL version
- * is installed.  Naturally, the PECL interface should offer speed benefits over the
- * native PHP version (or PEAR as it is called throughout this package), and will be
- * used as the preferred choice.
+ * This class provides a means to access several types of logical bitstreams (e.g. Vorbis)
+ * within a Ogg physical bitstream.
  *
  * @package File_Ogg
  */
@@ -154,7 +150,6 @@ class File_Ogg
 
         $header_flag 		= unpack("cdata", substr($pageData, 5, 1));
         $abs_granual_pos 	= unpack("Vdata", substr($pageData, 6, 8));
-        var_dump($abs_granual_pos);
         // Serial number for the current datastream.
         $stream_serial 		= unpack("Vdata", substr($pageData, 14, 4));
         $page_sequence 		= unpack("Vdata", substr($pageData, 18, 4));

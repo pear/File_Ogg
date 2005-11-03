@@ -14,12 +14,12 @@
         </maintainer>
     </maintainers>
     <release>
-        <version>0.2.0</version>
+        <version>0.2.1</version>
         <date>2005-11-03</date>
         <license>GNU LGPL</license>
         <state>beta</state>
         <notes>
-            There have been a few API changes since the last release, so if your system depends on this package, please ensure it isn't left broken.  The license has now been changed to LGPL.
+            This is a bugfix release.
         </notes>
         <filelist>
             <dir name="File" role="php">
@@ -35,6 +35,12 @@
         </filelist>
     </release>
     <changelog>
+		<release>
+		    <version>0.2.1</version>
+		    <state>beta</state>
+		    <date>2005-11-03</date>
+		    <notes>Fixed some basic bugs from the previous release.</notes>
+        </release>
 		<release>
 		    <version>0.2.0</version>
 		    <state>beta</state>
