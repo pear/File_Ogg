@@ -23,8 +23,8 @@ require_once('File/Ogg/Bitstream.php');
 
 /**
  * @author 		David Grant <david@grant.org.uk>
- * @copyright 	David Grant <david@grant.org.uk>
  * @category	File
+ * @copyright 	David Grant <david@grant.org.uk>
  * @license		http://www.gnu.org/copyleft/gpl.html GNU GPL
  * @link		http://pear.php.net/package/File_Ogg
  * @package 	File_Ogg
