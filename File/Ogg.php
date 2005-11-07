@@ -20,8 +20,8 @@
 // +--------------------------------------------------------------------------------+
 
 /**
- * @author 		David Grant <david@grant.org.uk>
- * @category	File
+ * @author 	    David Grant <david@grant.org.uk>
+ * @category    File
  * @copyright 	David Grant <david@grant.org.uk>
  * @license		http://www.gnu.org/copyleft/lesser.html GNU LGPL
  * @link		http://pear.php.net/package/File_Ogg

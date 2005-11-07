@@ -579,18 +579,30 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * The genre of this recording (e.g. Rock)
      *
+     * @return  string
      */
     function getGenre()
     {
     	return $this->getField("GENRE");
     }
     
+    /**
+     * The date of the recording of this track.
+     *
+     * @return  string
+     */
     function getDate()
     {
     	return $this->getField("DATE");
     }
     
+    /**
+     * Where this recording was made.
+     *
+     * @return  string
+     */
     function getLocation()
     {
     	return $this->getField("LOCATION");
@@ -601,6 +613,11 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     	return $this->getField("CONTACT");
     }
     
+    /**
+     * The International Standard Recording Code for this track.
+     *
+     * @return  string
+     */
     function getIsrc()
     {
     	return $this->getField("ISRC");
