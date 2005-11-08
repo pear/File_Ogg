@@ -56,16 +56,14 @@ define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
  * tags, running time, and bitrate.  For more information, please see the following
  * links.
  *
- * @link    http://www.xiph.org/ogg/vorbis/docs.html
- * @link    http://www.xiph.org/ogg/vorbis/doc/vorbis-ogg.html
- *
  * @author      David Grant <david@grant.org.uk>
  * @category    File
  * @copyright   David Grant <david@grant.org.uk>
  * @license     http://www.gnu.org/copyleft/lesser.html GNU LGPL
  * @link        http://pear.php.net/package/File_Ogg
- * @package File_Ogg
- * @version CVS: $Id$
+ * @link        http://www.xiph.org/vorbis/doc/
+ * @package     File_Ogg
+ * @version     CVS: $Id$
  */
 class File_Ogg_Vorbis extends File_Ogg_Bitstream
 {

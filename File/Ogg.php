@@ -105,6 +105,7 @@ define("OGG_ERROR_BAD_SERIAL",   3);
  * within a Ogg physical bitstream.
  *
  * @package File_Ogg
+ * @link    http://www.xiph.org/ogg/doc/
  */
 class File_Ogg
 {

@@ -27,6 +27,7 @@ require_once('File/Ogg/Bitstream.php');
  * @copyright   David Grant <david@grant.org.uk>
  * @license     http://www.gnu.org/copyleft/lesser.html GNU LGPL
  * @link        http://pear.php.net/package/File_Ogg
+ * @link        http://www.speex.org/docs.html
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
