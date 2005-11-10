@@ -19,31 +19,36 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('File/Ogg/Bitstream.php');
+require_once('Bitstream.php');
 
 /**
  * Check number for the first header in a Vorbis stream.
+ * 
  * @access  private
  */
 define("OGG_VORBIS_IDENTIFICATION_HEADER",  1);
 /**
  * Check number for the second header in a Vorbis stream.
+ * 
  * @access  private
  */
 define("OGG_VORBIS_COMMENTS_HEADER",        3);
 /**
  * Check number for the third header in a Vorbis stream.
+ * 
  * @access  private
  */
 define("OGG_VORBIS_SETUP_HEADER",           5);
 /**
  * Error thrown if the stream appears to be corrupted.
+ * 
  * @access  private
  */
 define("OGG_VORBIS_ERROR_UNDECODABLE",      1);
 /**
  * Error thrown if the user attempts to extract a comment using a comment key
  * that does not exist.
+ * 
  * @access  private
  */
 define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
@@ -70,80 +75,80 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     /**
      * Array to hold each of the comments.
      *
-     * @var array
      * @access  private
+     * @var     array
      */
     var $_comments = array();
 
     /**
      * Version of vorbis specification used.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_version;
 
     /**
      * Number of channels in the vorbis stream.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_channels;
 
     /**
      * Number of samples per second in the vorbis stream.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_sampleRate;
 
     /**
      * Minimum bitrate for the vorbis stream.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_minBitrate;
 
     /**
      * Maximum bitrate for the vorbis stream.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_maxBitrate;
 
     /**
      * Nominal bitrate for the vorbis stream.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_nomBitrate;
 
     /**
      * Average bitrate for the vorbis stream.
      *
-     * @var float
      * @access  private
+     * @var     float
      */
     var $_avgBitrate;
 
     /**
      * Vendor string for the vorbis stream.
      *
-     * @var string
      * @access  private
+     * @var     string
      */
     var $_vendor;
 
     /**
      * The length of this stream in seconds.
      *
-     * @var int
      * @access  private
+     * @var     int
      */
     var $_streamLength;
 
@@ -183,7 +188,6 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * specification to ensure the stream is pure.
      *
      * @access  private
-      
      */
     function _decodeIdentificationHeader()
     {
@@ -263,7 +267,7 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
             PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
     
         // The following six characters should be the characters 'v', 'o', 'r', 'b', 'i', 's'.
-        if (fread($this->_filePointer, 6) != "vorbis")
+        if (fread($this->_filePointer, 6) != OGG_STREAM_CAPTURE_VORBIS)
             PEAR::raiseError("Stream is undecodable due to a malformed header.", OGG_VORBIS_ERROR_UNDECODABLE);
     }
     
@@ -275,7 +279,6 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * a string to identify the encoding software.  More details on the comments header can
      * be found at the following location.
      *
-     * @link    http://www.xiph.org/ogg/vorbis/doc/v-comment.html
      * @access  private
      */
     function _decodeCommentsHeader()
@@ -341,9 +344,9 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * rare as one might think, since they are conceivable at least for ARTIST comments
      * in the situation where a track is a duet.
      *
+     * @access  public
      * @param   string  $commentTitle   Comment title to search for, e.g. TITLE.
      * @return  string
-     * @access  public
      */
     function getField($commentTitle)
     {
@@ -354,7 +357,7 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
             return ($this->_comments[$commentTitle]);
     } else
         // The comment doesn't exist in this file.  The user should've called getCommentList first.
-        return "";
+        return ("");
     }
 
     /**
@@ -364,8 +367,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * referred to by the encoder of this stream.  The Vorbis specification is well-
      * defined, and thus one does not expect this value to change on a frequent basis.
      *
-     * @return  int
      * @access  public
+     * @return  int
      */
     function getEncoderVersion()
     {
@@ -380,8 +383,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * compared this vendor string against a release table, but this has been
      * removed, as encoding software is not limited to libvorbis.
      *
-     * @return  string
      * @access  public
+     * @return  string
      */
     function getVendor()
     {
@@ -394,10 +397,11 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the number of channels used in this stream.  This
      * can range from 1 to 255, but will likely be 2 (stereo) or 1 (mono).
      *
+     * @access  public
      * @return  int
      * @see     File_Ogg_Vorbis::isMono()
      * @see     File_Ogg_Vorbis::isStereo()
-     * @access  public
+     * @see     File_Ogg_Vorbis::isQuadrophonic()
      */
     function getChannels()
     {
@@ -425,8 +429,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * stream. The nominal, maximum and minimum values are found within the file,
      * whereas the average value is computed.
      *
-     * @return  array
      * @access  public
+     * @return  array
      */
     function getBitrates()
     {
@@ -439,8 +443,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the most accurate bitrate measurement for this
      * recording, depending on values set in the stream header.
      *
-     * @return  float
      * @access  public
+     * @return  float
      */
     function getBitrate()
     {
@@ -455,8 +459,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     /**
      * Gives the length (in seconds) of this stream.
      *
-     * @return  int
      * @access  public
+     * @return  int
      */
     function getLength()
     {
@@ -466,36 +470,51 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     /**
      * States whether this logical stream was encoded in mono.
      *
+     * @access  public
      * @return  boolean
      */
     function isMono()
     {
-        return $this->_channels == 1;
+        return ($this->_channels == 1);
     }
     
     /**
      * States whether this logical stream was encoded in stereo.
      *
+     * @access  public
      * @return  boolean
      */
     function isStereo()
     {
-        return $this->_channels == 2;
+        return ($this->_channels == 2);
+    }
+    
+    /**
+     * States whether this logical stream was encoded in quadrophonic sound.
+     *
+     * @access  public
+     * @return  boolean
+     */
+    function isQuadrophonic()
+    {
+        return ($this->_channels == 4);
     }
     
     /**
      * The title of this track, e.g. "What's Up Pussycat?".
      *
-     * @return string
+     * @access  public
+     * @return  string
      */
     function getTitle()
     {
-        return $this->getField("TITLE");
+        return ($this->getField("TITLE"));
     }
     
     /**
      * The version of the track, such as a remix.
      *
+     * @access  public
      * @return  string
      */
     function getVersion()
@@ -504,23 +523,25 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
-     * The album from which this track comes.
+     * The album or collection from which this track comes.
      *
+     * @access  public
      * @return  string
      */
     function getAlbum()
     {
-        return $this->getField("ALBUM");
+        return ($this->getField("ALBUM"));
     }
     
     /**
      * The number of this track if it is part of a larger collection.
      *
+     * @access  public
      * @return  string
      */
     function getTrackNumber()
     {
-        return $this->getField("TRACKNUMBER");
+        return ($this->getField("TRACKNUMBER"));
     }
     
     /**
@@ -529,31 +550,34 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the name of the artist responsible for this
      * recording, which may be either a solo-artist, duet or group.
      *
+     * @access  public
      * @return  string
      */
     function getArtist()
     {
-        return $this->getField("ARTIST");
+        return ($this->getField("ARTIST"));
     }
     
     /**
      * The performer of this track, such as an orchestra
      *
+     * @access  public
      * @return  string
      */
     function getPerformer()
     {
-        return $this->getField("PERFORMER");
+        return ($this->getField("PERFORMER"));
     }
     
     /**
      * The copyright attribution for this track.
      *
+     * @access  public
      * @return  string
      */
     function getCopyright()
     {
-        return $this->getField("COPYRIGHT");
+        return ($this->getField("COPYRIGHT"));
     }
     
     /**
@@ -562,11 +586,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This funtion returns the license for this track, and may include
      * copyright information, or a creative commons statement.
      *
+     * @access  public
      * @return  string
      */
     function getLicense()
     {
-        return $this->getField("LICENSE");
+        return ($this->getField("LICENSE"));
     }
     
     /**
@@ -575,11 +600,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the name of the organisation responsible for 
      * the production of this track, such as the record label.
      *
+     * @access  public
      * @return  string
      */
     function getOrganization()
     {
-        return $this->getField("ORGANIZATION");
+        return ($this->getField("ORGANIZATION"));
     }
     
     /**
@@ -588,11 +614,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns a short description of this track, which might
      * contain extra information that doesn't fit anywhere else.
      *
+     * @access  public
      * @return  string
      */
     function getDescription()
     {
-        return $this->getField("DESCRIPTION");
+        return ($this->getField("DESCRIPTION"));
     }
     
     /**
@@ -601,11 +628,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the genre of this recording.  There are no pre-
      * defined genres, so this is completely up to the tagging software.
      *
+     * @access  public
      * @return  string
      */
     function getGenre()
     {
-        return $this->getField("GENRE");
+        return ($this->getField("GENRE"));
     }
     
     /**
@@ -614,11 +642,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns the date on which this recording was made.  There
      * is no specification for the format of this date.
      *
+     * @access  public
      * @return  string
      */
     function getDate()
     {
-        return $this->getField("DATE");
+        return ($this->getField("DATE"));
     }
     
     /**
@@ -627,19 +656,21 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * This function returns where this recording was made, such as a recording
      * studio, or concert venue.
      *
+     * @access  public
      * @return  string
      */
     function getLocation()
     {
-        return $this->getField("LOCATION");
+        return ($this->getField("LOCATION"));
     }
     
     /**
+     * @access  public
      * @return  string
      */
     function getContact()
     {
-        return $this->getField("CONTACT");
+        return ($this->getField("CONTACT"));
     }
     
     /**
@@ -648,11 +679,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * Returns the International Standard Recording Code.  This code can be
      * validated using the Validate_ISPN package.
      *
+     * @access  public
      * @return  string
      */
     function getIsrc()
     {
-        return $this->getField("ISRC");
+        return ($this->getField("ISRC"));
     }
 }
 ?>

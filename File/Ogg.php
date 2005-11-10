@@ -30,7 +30,7 @@
  */
 
 require_once('PEAR.php');
-require_once('Ogg' . DIRECTORY_SEPARATOR . 'Bitstream.php');
+require_once('File/Ogg/Bitstream.php');
 
 /**
  * @access  public
