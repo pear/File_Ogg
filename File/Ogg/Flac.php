@@ -19,7 +19,7 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('Bitstream.php');
+require_once('File/Ogg/Bitstream.php');
 
 /**
  * @author      David Grant <david@grant.org.uk>

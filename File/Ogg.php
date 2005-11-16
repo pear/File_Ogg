@@ -150,6 +150,7 @@ class File_Ogg
             return;
         }
 
+        // Open this file as a binary, and split the file into streams.
         $this->_filePointer = fopen($fileLocation, "rb");
         if (is_resource($this->_filePointer))
             $this->_splitStreams();
@@ -164,11 +165,11 @@ class File_Ogg
     {
         // Extract the various bits and pieces found in each packet header.
         if (substr($pageData, 0, 4) != OGG_CAPTURE_PATTERN)
-            return (FALSE);
+            return (false);
 
         $stream_version = unpack("c1data", substr($pageData, 4, 1));
         if ($stream_version['data'] != 0x00)
-            return (FALSE);
+            return (falses);
 
         $header_flag     = unpack("cdata", substr($pageData, 5, 1));
         $abs_granual_pos = unpack("Vdata", substr($pageData, 6, 8));
@@ -179,7 +180,7 @@ class File_Ogg
         $page_segments   = unpack("cdata", substr($pageData, 26, 1));
         $segments_total  = 0;
         for ($i = 0; $i < $page_segments['data']; ++$i) {
-            $segments           = unpack("Cdata", substr($pageData, 26 + ($i + 1), 1));
+            $segments = unpack("Cdata", substr($pageData, 26 + ($i + 1), 1));
             $segments_total += $segments['data'];
         }
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['stream_version']     = $stream_version['data'];
@@ -192,7 +193,7 @@ class File_Ogg
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['body_finish']        = $pageFinish;
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['data_length']        = $pageFinish - $pageOffset;
         
-        return (TRUE);
+        return (true);
     }
     
     /**
@@ -201,12 +202,12 @@ class File_Ogg
     function _splitStreams()
     {
         // Loop through the physical stream until there are no more pages to read.
-        while (TRUE) {
+        while (true) {
             $this_page_offset = ftell($this->_filePointer);
             $next_page_offset = $this_page_offset;
 
             // Read in 65311 bytes from the physical stream.  Ogg documentation
-            // states that a page has a maximum size of 65304 bytes.  An extra
+            // states that a page has a maximum size of 65307 bytes.  An extra
             // 4 bytes are added to ensure that the capture pattern of the next
             // pages comes through.
             if (! ($stream_data = fread($this->_filePointer, OGG_MAXIMUM_PAGE_SIZE)))
@@ -254,6 +255,26 @@ class File_Ogg
     }
     
     /**
+     * Returns the overead percentage used by the Ogg headers.
+     * 
+     * This function returns the percentage of the total stream size
+     * used for Ogg headers.
+     *
+     * @return float
+     */
+    function getOverhead() {
+        $header_size    = 0;
+        $stream_size    = 0;
+        foreach ($this->_streamList as $stream) {
+            foreach ($stream['stream_page'] as $offset => $stream_data) {
+                $header_size += $stream_data['body_offset'] - $stream_data['head_offset'];
+                $stream_size  = $stream_data['body_finish'];
+            }
+        }
+        return sprintf("%0.2f", ($header_size / $stream_size) * 100);
+    }
+    
+    /**
      * Returns the appropriate logical bitstream that corresponds to the provided serial.
      *
      * This function returns a logical bitstream contained within the Ogg physical
@@ -270,16 +291,16 @@ class File_Ogg
 
         switch ($this->_streamList[$streamSerial]['stream_type']) {
             case (OGG_STREAM_VORBIS):
-                require_once("Ogg/Vorbis.php");
+                require_once("File/Ogg/Vorbis.php");
                 return (new File_Ogg_Vorbis($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
             case (OGG_STREAM_SPEEX):
-                require_once("Ogg/Speex.php");
+                require_once("File/Ogg/Speex.php");
                 return (new File_Ogg_Speex($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
             case (OGG_STREAM_FLAC):
-                require_once("Ogg/Flac.php");
+                require_once("File/Ogg/Flac.php");
                 return (new File_Ogg_Flac($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
             case (OGG_STREAM_THEORA):
-                require_once("Ogg/Theora.php");
+                require_once("File/Ogg/Theora.php");
                 return (new File_Ogg_Theora($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
             default:
                 PEAR::raiseError("This stream could not be identified.", OGG_ERROR_UNSUPPORTED);

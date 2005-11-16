@@ -19,7 +19,7 @@
 // | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA |
 // +----------------------------------------------------------------------------+
 
-require_once('Bitstream.php');
+require_once('File/Ogg/Bitstream.php');
 
 /**
  * Check number for the first header in a Vorbis stream.
@@ -290,7 +290,7 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
         $this->_vendor  = fread($this->_filePointer, $vendor_len['data']);
         // Decode the size of the comments list.
         $comment_list_length = unpack("Vdata", fread($this->_filePointer, 4));
-        for ($i = 0; $i < $comment_list_length['data']; $i++) {
+        for ($i = 0; $i < $comment_list_length['data']; ++$i) {
             $comment_length = unpack("Vdata", fread($this->_filePointer, 4));
             // Comments are in the format 'ARTIST=Super Furry Animals', so split it on the equals character.
             // NOTE: Equals characters are strictly prohibited in either the COMMENT or DATA parts.
@@ -304,12 +304,12 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
             // multiple instances (e.g. ARTIST for a collaboration) and we should not
             // overwrite the previous value.
             if (isset($this->_comments[$comment_title])) {
-            if (is_array($this->_comments[$comment_title]))
-                $this->_comments[$comment_title][] = $comment_value;
-            else
-                $this->_comments[$comment_title] = array($this->_comments[$comment_title], $comment_value);
+                if (is_array($this->_comments[$comment_title]))
+                    $this->_comments[$comment_title][] = $comment_value;
+                else
+                    $this->_comments[$comment_title] = array($this->_comments[$comment_title], $comment_value);
             } else
-            $this->_comments[$comment_title] = $comment_value;
+                $this->_comments[$comment_title] = $comment_value;
         }
     
         // The framing bit MUST be set to mark the end of the comments header.
@@ -346,18 +346,39 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      *
      * @access  public
      * @param   string  $commentTitle   Comment title to search for, e.g. TITLE.
+     * @param   string  $separator      String to separate multiple values.
      * @return  string
      */
-    function getField($commentTitle)
+    function getField($commentTitle, $separator = ", ")
     {
     if (isset($this->_comments[$commentTitle])) {
         if (is_array($this->_comments[$commentTitle]))
-            return (implode(", ", $this->_comments[$commentTitle]));
+            return (implode($separator, $this->_comments[$commentTitle]));
         else
             return ($this->_comments[$commentTitle]);
     } else
         // The comment doesn't exist in this file.  The user should've called getCommentList first.
         return ("");
+    }
+    
+    /**
+     * Set a field for this stream's meta description.
+     *
+     * @access  public
+     * @param   string  $field
+     * @param   mixed   $value
+     * @param   boolean $replace
+     */
+    function setField($field, $value, $replace = true)
+    {
+        if ($replace || ! isset($this->_comments[$field])) {
+            $this->_comments[$field] = $value;
+        } else {
+            if (is_array($this->_comments[$field])) 
+                $this->_comments[$field][] = $value;
+            else
+                $this->_comments[$field] = array($this->_comments[$field], $value);
+        }
     }
 
     /**
@@ -379,9 +400,8 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      * Vendor of software used to encode this stream.
      *
      * Gives the vendor string for the software used to encode this stream.
-     * It is common to find libVorbis here.  A previous version of this package
-     * compared this vendor string against a release table, but this has been
-     * removed, as encoding software is not limited to libvorbis.
+     * It is common to find libVorbis here.  The majority of encoders appear
+     * to use libvorbis from Xiph.org.
      *
      * @access  public
      * @return  string
@@ -512,6 +532,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the title of this track.
+     *
+     * @access  public
+     * @param   string  $title
+     * @param   boolean $replace
+     */
+    function setTitle($title, $replace = true)
+    {
+        $this->setField("TITLE", $title, $replace);
+    }
+    
+    /**
      * The version of the track, such as a remix.
      *
      * @access  public
@@ -520,6 +552,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getVersion()
     {
         return $this->getField("VERSION");
+    }
+    
+    /**
+     * Set the version of this track.
+     *
+     * @access  public
+     * @param   string  $version
+     * @param   boolean $replace
+     */
+    function setVersion($version, $replace = true)
+    {
+        $this->setField("VERSION", $version, $replace);
     }
     
     /**
@@ -534,6 +578,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the album or collection for this track.
+     *
+     * @access  public
+     * @param   string  $album
+     * @param   boolean $replace
+     */
+    function setAlbum($album, $replace = true)
+    {
+        $this->setField("ALBUM", $album, $replace);
+    }
+    
+    /**
      * The number of this track if it is part of a larger collection.
      *
      * @access  public
@@ -542,6 +598,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getTrackNumber()
     {
         return ($this->getField("TRACKNUMBER"));
+    }
+    
+    /**
+     * Set the number of this relative to the collection.
+     *
+     * @access  public
+     * @param   int     $number
+     * @param   boolean $replace
+     */
+    function setTrackNumber($number, $replace = true)
+    {
+        $this->setField("TRACKNUMBER", $number, $replace);
     }
     
     /**
@@ -559,6 +627,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the artist of this track.
+     *
+     * @access  public
+     * @param   string  $artist
+     * @param   boolean $replace
+     */
+    function setArtist($artist, $replace = true)
+    {
+        $this->setField("ARTIST", $artist, $replace = true);
+    }
+    
+    /**
      * The performer of this track, such as an orchestra
      *
      * @access  public
@@ -570,6 +650,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the performer of this track.
+     *
+     * @access  public
+     * @param   string  $performer
+     * @param   boolean $replace
+     */
+    function setPerformer($performer, $replace = true)
+    {
+        $this->setField("PERFORMER", $performer, $replace);
+    }
+    
+    /**
      * The copyright attribution for this track.
      *
      * @access  public
@@ -578,6 +670,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getCopyright()
     {
         return ($this->getField("COPYRIGHT"));
+    }
+    
+    /**
+     * Set the copyright attribution for this track.
+     *
+     * @access  public
+     * @param   string  $copyright
+     * @param   boolean $replace
+     */
+    function setCopyright($copyright, $replace = true)
+    {
+        $this->setField("COPYRIGHT", $copyright, $replace);
     }
     
     /**
@@ -595,6 +699,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the distribution rights for this track.
+     *
+     * @access  public
+     * @param   string  $license
+     * @param   boolean $replace
+     */
+    function setLicense($license, $replace = true)
+    {
+        $this->setField("LICENSE", $license, $replace);
+    }
+    
+    /**
      * The organisation responsible for this track.
      *
      * This function returns the name of the organisation responsible for 
@@ -606,6 +722,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getOrganization()
     {
         return ($this->getField("ORGANIZATION"));
+    }
+    
+    /**
+     * Set the organisation responsible for this track.
+     *
+     * @access  public
+     * @param   string  $organization
+     * @param   boolean $replace
+     */
+    function setOrganziation($organization, $replace = true)
+    {
+        $this->setField("ORGANIZATION", $organization, $replace);
     }
     
     /**
@@ -623,6 +751,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the description of this track.
+     *
+     * @access  public
+     * @param   string  $description
+     * @param   boolean $replace
+     */
+    function setDescription($description, $replace = true)
+    {
+        $this->setField("DESCRIPTION", $replace);
+    }
+    
+    /**
      * The genre of this recording (e.g. Rock)
      *
      * This function returns the genre of this recording.  There are no pre-
@@ -634,6 +774,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getGenre()
     {
         return ($this->getField("GENRE"));
+    }
+    
+    /**
+     * Set the genre of this track.
+     *
+     * @access  public
+     * @param   string  $genre
+     * @param   boolean $replace
+     */
+    function setGenre($genre, $replace = true)
+    {
+        $this->setField("GENRE", $genre, $replace);
     }
     
     /**
@@ -651,6 +803,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the date of recording for this track.
+     *
+     * @access  public
+     * @param   string  $date
+     * @param   boolean $replace
+     */
+    function setDate($date, $replace = true)
+    {
+        $this->setField("DATE", $date, $replace);
+    }
+    
+    /**
      * Where this recording was made.
      *
      * This function returns where this recording was made, such as a recording
@@ -665,12 +829,36 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     }
     
     /**
+     * Set the location of the recording of this track.
+     *
+     * @access  public
+     * @param   string  $location
+     * @param   boolean $replace
+     */
+    function setLocation($location, $replace = true)
+    {
+        $this->setField("LOCATION", $location, $replace);
+    }
+    
+    /**
      * @access  public
      * @return  string
      */
     function getContact()
     {
         return ($this->getField("CONTACT"));
+    }
+    
+    /**
+     * Set the contact information for this track.
+     *
+     * @access  public
+     * @param   string  $contact
+     * @param   boolean $replace
+     */
+    function setContact($contact, $replace = true)
+    {
+        $this->setField("CONTACT", $contact, $replace);
     }
     
     /**
@@ -685,6 +873,18 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getIsrc()
     {
         return ($this->getField("ISRC"));
+    }
+    
+    /**
+     *  Set the ISRC for this track.
+     *
+     * @access  public
+     * @param   string  $isrc
+     * @param   boolean $replace
+     */
+    function setIsrc($isrc, $replace = true)
+    {
+        $this->setField("ISRC", $isrc, $replace);
     }
 }
 ?>
