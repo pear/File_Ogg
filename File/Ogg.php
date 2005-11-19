@@ -31,6 +31,10 @@
 
 require_once('PEAR.php');
 require_once('File/Ogg/Bitstream.php');
+require_once("File/Ogg/Flac.php");
+require_once("File/Ogg/Speex.php");
+require_once("File/Ogg/Theora.php");
+require_once("File/Ogg/Vorbis.php");
 
 /**
  * @access  public
@@ -51,6 +55,7 @@ define("OGG_STREAM_FLAC",       4);
 
 /**
  * Capture pattern to determine if a file is an Ogg physical stream.
+ * 
  * @access  private
  */
 define("OGG_CAPTURE_PATTERN", "OggS");
@@ -58,11 +63,13 @@ define("OGG_CAPTURE_PATTERN", "OggS");
  * Maximum size of an Ogg stream page plus four.  This value is specified to allow
  * efficient parsing of the physical stream.  The extra four is a paranoid measure
  * to make sure a capture pattern is not split into two parts accidentally.
+ * 
  * @access  private
  */
 define("OGG_MAXIMUM_PAGE_SIZE", 65311);
 /**
  * Capture pattern for an Ogg Vorbis logical stream.
+ * 
  * @access  private
  */
 define("OGG_STREAM_CAPTURE_VORBIS", "vorbis");
@@ -73,27 +80,32 @@ define("OGG_STREAM_CAPTURE_VORBIS", "vorbis");
 define("OGG_STREAM_CAPTURE_SPEEX",  "Speex   ");
 /**
  * Capture pattern for an Ogg FLAC logical stream.
+ * 
  * @access  private
  */
 define("OGG_STREAM_CAPTURE_FLAC",   "fLaC");
 /**
  * Capture pattern for an Ogg Theora logical stream.
+ * 
  * @access  private
  */
 define("OGG_STREAM_CAPTURE_THEORA", "theora");
 /**
  * Error thrown if the file location passed is nonexistant or unreadable.
+ * 
  * @access  private
  */
 define("OGG_ERROR_INVALID_FILE", 1);
 /**
  * Error thrown if the user attempts to extract an unsupported logical stream.
+ * 
  * @access  private
  */
 define("OGG_ERROR_UNSUPPORTED",  2);
 /**
  * Error thrown if the user attempts to extract an logical stream with no
  * corresponding serial number.
+ * 
  * @access  private
  */
 define("OGG_ERROR_BAD_SERIAL",   3);
@@ -104,8 +116,8 @@ define("OGG_ERROR_BAD_SERIAL",   3);
  * This class provides a means to access several types of logical bitstreams (e.g. Vorbis)
  * within a Ogg physical bitstream.
  *
- * @package File_Ogg
  * @link    http://www.xiph.org/ogg/doc/
+ * @package File_Ogg
  */
 class File_Ogg
 {
@@ -131,6 +143,7 @@ class File_Ogg
      * @access  private
      */
     var $_streamList = array();
+    var $_streams = array();
 
     /**
      * Returns an interface to an Ogg physical stream.
@@ -186,7 +199,7 @@ class File_Ogg
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['stream_version']     = $stream_version['data'];
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['header_flag']        = $header_flag['data'];
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['abs_granual_pos']    = $abs_granual_pos['data'];
-        $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['checksum']           = $checksum['data'];
+        $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['checksum']           = sprintf("%u", $checksum['data']);
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['segments']           = $segments_total;
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['head_offset']        = $pageOffset;
         $this->_streamList[$stream_serial['data']]['stream_page'][$page_sequence['data']]['body_offset']        = $pageOffset + 26 + $page_segments['data'] + 1;
@@ -241,17 +254,22 @@ class File_Ogg
         foreach ($this->_streamList as $stream_serial => $pages) {
             fseek($this->_filePointer, $pages['stream_page'][0]['body_offset'], SEEK_SET);
             $pattern = fread($this->_filePointer, 8);
-            if (preg_match("/" . OGG_STREAM_CAPTURE_VORBIS . "/", $pattern))
+            if (preg_match("/" . OGG_STREAM_CAPTURE_VORBIS . "/", $pattern)) {
                 $this->_streamList[$stream_serial]['stream_type'] = OGG_STREAM_VORBIS;
-            elseif (preg_match("/" . OGG_STREAM_CAPTURE_SPEEX . "/", $pattern))
+                $this->_streams[$stream_serial] =& new File_Ogg_Vorbis($stream_serial, $this->_streamList[$stream_serial]['stream_page'], $this->_filePointer);
+            } elseif (preg_match("/" . OGG_STREAM_CAPTURE_SPEEX . "/", $pattern)) {
                 $this->_streamList[$stream_serial]['stream_type'] = OGG_STREAM_SPEEX;
-            elseif (preg_match("/" . OGG_STREAM_CAPTURE_FLAC . "/", $pattern))
+                $this->_streams[$stream_serial] =& new File_Ogg_Speex($stream_serial, $this->_streamList[$stream_serial]['stream_page'], $this->_filePointer);
+            } elseif (preg_match("/" . OGG_STREAM_CAPTURE_FLAC . "/", $pattern)) {
                 $this->_streamList[$stream_serial]['stream_type'] = OGG_STREAM_FLAC;
-            elseif (preg_match("/" . OGG_STREAM_CAPTURE_THEORA . "/", $pattern))
+                $this->_streams[$stream_serial] =& new File_Ogg_Flac($stream_serial, $this->_streamList[$stream_serial]['stream_page'], $this->_filePointer);
+            } elseif (preg_match("/" . OGG_STREAM_CAPTURE_THEORA . "/", $pattern)) {
                 $this->_streamList[$stream_serial]['stream_type'] = OGG_STREAM_THEORA;
-            else
+                $this->_streams[$stream_serial] =& new File_Ogg_Theora($stream_serial, $this->_streamList[$stream_serial]['stream_page'], $this->_filePointer);
+            } else
                 $this->_streamList[$stream_serial]['stream_type'] = "unknown";
         }
+        unset($this->_streamList);
     }
     
     /**
@@ -265,8 +283,8 @@ class File_Ogg
     function getOverhead() {
         $header_size    = 0;
         $stream_size    = 0;
-        foreach ($this->_streamList as $stream) {
-            foreach ($stream['stream_page'] as $offset => $stream_data) {
+        foreach ($this->_streams as $serial => $stream) {
+            foreach ($stream->_streamList as $offset => $stream_data) {
                 $header_size += $stream_data['body_offset'] - $stream_data['head_offset'];
                 $stream_size  = $stream_data['body_finish'];
             }
@@ -284,28 +302,12 @@ class File_Ogg
      *
      * @return File_Ogg_Bitstream
      */
-    function getStream($streamSerial)
+    function &getStream($streamSerial)
     {
-        if (! array_key_exists($streamSerial, $this->_streamList))
+        if (! array_key_exists($streamSerial, $this->_streams))
                 PEAR::raiseError("The stream number is invalid.", OGG_ERROR_BAD_SERIAL);
 
-        switch ($this->_streamList[$streamSerial]['stream_type']) {
-            case (OGG_STREAM_VORBIS):
-                require_once("File/Ogg/Vorbis.php");
-                return (new File_Ogg_Vorbis($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
-            case (OGG_STREAM_SPEEX):
-                require_once("File/Ogg/Speex.php");
-                return (new File_Ogg_Speex($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
-            case (OGG_STREAM_FLAC):
-                require_once("File/Ogg/Flac.php");
-                return (new File_Ogg_Flac($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
-            case (OGG_STREAM_THEORA):
-                require_once("File/Ogg/Theora.php");
-                return (new File_Ogg_Theora($streamSerial, $this->_streamList[$streamSerial], $this->_filePointer));
-            default:
-                PEAR::raiseError("This stream could not be identified.", OGG_ERROR_UNSUPPORTED);
-        }
-        return false;
+        return $this->_streams[$streamSerial];
     }
     
     /**
@@ -320,7 +322,7 @@ class File_Ogg
      */
     function hasStream($streamType)
     {
-        foreach ($this->_streamList as $stream) {
+        foreach ($this->_stream as $stream) {
             if ($stream['stream_type'] == $streamType)
                 return (true);
         }
@@ -342,20 +344,46 @@ class File_Ogg
     function listStreams($filter = null)
     {
         $streams = array();
-        foreach ($this->_streamList as $stream_serial => $stream) {
-            if (! isset($streams[$stream['stream_type']]))
+        // Loops through the streams and assign them to an appropriate index,
+        // ready for filtering the second part of this function.
+        foreach ($this->_streams as $serial => $stream) {
+            $stream_type = 0;
+            switch (get_class($stream)) {
+                case "file_ogg_flac":
+                    $stream_type = OGG_STREAM_FLAC;
+                    break;
+                case "file_ogg_speex":
+                    $stream_type = OGG_STREAM_SPEEX;
+                    break;
+                case "file_ogg_theora":
+                    $stream_type = OGG_STREAM_THEORA;
+                    break;
+                case "file_ogg_vorbis":
+                    $stream_type = OGG_STREAM_VORBIS;
+                    break;
+            }
+            if (! isset($streams[$stream_type]))
                 // Initialise the result list for this stream type.
-                $streams[$stream['stream_type']] = array();
+                $streams[$stream_type] = array();
                         
-            $streams[$stream['stream_type']][] = $stream_serial;
+            $streams[$stream_type][] = $serial;
         }
 
+        // Perform filtering.
         if (is_null($filter))
             return ($streams);
         elseif (isset($streams[$filter]))
             return ($streams[$filter]);
         else
             return array();
+    }
+    
+    function saveChanges()
+    {
+        $fp     = tmpfile();
+        $diff   = 0;
+        foreach ($this->_streams as $stream)
+            $stream->_saveChanges($fp, $diff);
     }
 }
 ?>
