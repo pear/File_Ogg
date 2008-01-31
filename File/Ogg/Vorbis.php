@@ -2,7 +2,9 @@
 /* vim: set expandtab tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------------+
 // | File_Ogg PEAR Package for Accessing Ogg Bitstreams                         |
-// | Copyright (c) 2005 David Grant <david@grant.org.uk>                        |
+// | Copyright (c) 2005-2007                                                    |
+// | David Grant <david@grant.org.uk>                                           |
+// | Tim Starling <tstarling@wikimedia.org>                                     |
 // +----------------------------------------------------------------------------+
 // | This library is free software; you can redistribute it and/or              |
 // | modify it under the terms of the GNU Lesser General Public                 |
@@ -44,7 +46,7 @@ define("OGG_VORBIS_SETUP_HEADER",           5);
  * 
  * @access  private
  */
-define("OGG_VORBIS_ERROR_UNDECODABLE",      1);
+define("OGG_VORBIS_ERROR_UNDECODABLE",      OGG_ERROR_UNDECODABLE);
 /**
  * Error thrown if the user attempts to extract a comment using a comment key
  * that does not exist.
@@ -72,24 +74,17 @@ define("OGG_VORBIS_ERROR_ILLEGAL_COMMENT",  3);
  * tags, running time, and bitrate.  For more information, please see the following
  * links.
  *
- * @author      David Grant <david@grant.org.uk>
+ * @author      David Grant <david@grant.org.uk>, Tim Starling <tstarling@wikimedia.org>
  * @category    File
- * @copyright   David Grant <david@grant.org.uk>
+ * @copyright   David Grant <david@grant.org.uk>, Tim Starling <tstarling@wikimedia.org>
  * @license     http://www.gnu.org/copyleft/lesser.html GNU LGPL
  * @link        http://pear.php.net/package/File_Ogg
  * @link        http://www.xiph.org/vorbis/doc/
  * @package     File_Ogg
  * @version     CVS: $Id$
  */
-class File_Ogg_Vorbis extends File_Ogg_Bitstream
+class File_Ogg_Vorbis extends File_Ogg_Media
 {
-    /**
-     * Array to hold each of the comments.
-     *
-     * @access  private
-     * @var     array
-     */
-    var $_comments = array();
 
     /**
      * Version of vorbis specification used.
@@ -148,14 +143,6 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     var $_avgBitrate;
 
     /**
-     * Vendor string for the vorbis stream.
-     *
-     * @access  private
-     * @var     string
-     */
-    var $_vendor;
-
-    /**
      * The length of this stream in seconds.
      *
      * @access  private
@@ -163,7 +150,6 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      */
     var $_streamLength;
     
-    var $_original_comments_length;
 
     /**
      * Constructor for accessing a Vorbis logical stream.
@@ -179,79 +165,24 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
      */
     function File_Ogg_Vorbis($streamSerial, $streamData, $filePointer)
     {
-        $this->_streamSerial    = $streamSerial;
-        $this->_streamList      = $streamData;
-        $this->_filePointer     = $filePointer;
+        File_Ogg_Bitstream::File_Ogg_Bitstream($streamSerial, $streamData, $filePointer);
         $this->_decodeIdentificationHeader();
-        $this->_decodeCommentsHeader();
-        $this->_streamLength    = round($streamData[count($streamData) - 1]['abs_granual_pos'] / $this->_sampleRate);
-        // This gives an accuracy of approximately 99.7% to the streamsize of ogginfo.
-        for ($i = 0; $i < count($streamData); ++$i)
-            $this->_streamSize += $streamData[$i]['data_length'];
-    
-        $this->_avgBitrate      = round(($this->_streamSize * 8) / $this->_streamLength);
+        $this->_decodeCommentsHeader(OGG_VORBIS_COMMENTS_HEADER, OGG_VORBIS_COMMENTS_PAGE_OFFSET);
+        $this->_streamLength    = 
+            (( '0x' . substr( $this->_lastGranulePos, 0, 8 ) ) * pow(2, 32) 
+            + ( '0x' . substr( $this->_lastGranulePos, 8, 8 ) ))
+            / $this->_idHeader['audio_sample_rate'];
+        $this->_avgBitrate      = $this->_streamLength ? ($this->_streamSize * 8) / $this->_streamLength : 0;
     }
-    
+
     /**
-     * Save changes made to this stream.
-     *
-     * @access  private
-     * @param   resource    $fp
-     * @param   int         $diff
+     * Get a short string describing the type of the stream
      */
-    function _saveChanges($fp, &$diff) {
-        // Reset the file point to the original head offset of this stream.
-        fseek($this->_filePointer, $this->_streamList[0]['head_offset']);
-
-        // Reset the checksum.
-        $this->_streamList[OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET]['checksum']     = 0;
-        // Change the offset of the page indices by the number of characters
-        // carried forward from the previous stream.
-        $this->_streamList[OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET]['head_offset'] -= $diff;
-        $this->_streamList[OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET]['body_offset'] -= $diff;
-        $this->_streamList[OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET]['body_finish'] -= $diff;                
-        
-        // Change the offset of the page indices by the number of characters
-        // carried forward from the previous stream.
-        $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['head_offset'] -= $diff;
-        $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['body_offset'] -= $diff;
-        
-        // Adjust the page index offset for all streams in the ogg container.
-        // The diff variable is passed by reference, so the changes will be 
-        // carried forward for following streams.
-        $diff += $this->_original_comments_length - strlen($this->_encodeCommentsHeader());
-        
-        // Adjust the offset of the comments page.  The head
-        // start and body start remain the same, since the change
-        // is made in the page body.
-        $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['checksum']     = 0;
-        $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['body_finish'] -= $diff;
-        $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['data_length'] -= $diff;
-
-        foreach ($this->_streamList as $offset => $stream_parts) {
-            if ($offset > OGG_VORBIS_COMMENTS_PAGE_OFFSET) {
-                // Forward the file pointer
-                fseek($this->_filePointer, $this->_streamList[$offset]['head_offset'], SEEK_SET);
-                $page  = fread($this->_filePointer, 22);
-                // Jump over the reserved checksum space.
-                fseek($this->_filePointer, 4, SEEK_CUR);
-                // Pack in an empty checksum, ready for page CRC operation.
-                $page .= pack("V", 0);
-                // Read the remainder of this page.
-                $page .= fread($this->_filePointer, $this->_streamList[$offset]['data_length'] - 26);
-                echo $this->_streamList[$offset]['checksum'] . "\n";
-                echo sprintf("%u", crc32($page)) . "\n\n";
-
-                // Reset the checksum ready for CRC recalculation.
-                $this->_streamList[$offset]['checksum']     = 0;
-                // Adjust the offset of the various indices in the header.
-                $this->_streamList[$offset]['head_offset'] -= $diff;
-                $this->_streamList[$offset]['body_offset'] -= $diff;
-                $this->_streamList[$offset]['body_finish'] -= $diff;
-            }
-        }
+    function getType() 
+    {
+        return 'Vorbis'; 
     }
-    
+
     /**
      * Parse the identification header (the first of three headers) in a Vorbis stream.
      *
@@ -265,265 +196,93 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function _decodeIdentificationHeader()
     {
         $this->_decodeCommonHeader(OGG_VORBIS_IDENTIFICATION_HEADER, OGG_VORBIS_IDENTIFICATION_PAGE_OFFSET);
-    
-        $version = unpack("Vdata", fread($this->_filePointer, 4));
-    
+
+        $h = File_Ogg::_readLittleEndian($this->_filePointer, array(
+            'vorbis_version'        => 32,
+            'audio_channels'        => 8,
+            'audio_sample_rate'     => 32,
+            'bitrate_maximum'       => 32,
+            'bitrate_nominal'       => 32,
+            'bitrate_minimum'       => 32,
+            'blocksize_0'           => 4,
+            'blocksize_1'           => 4,
+            'framing_flag'          => 1
+        ));
+
         // The Vorbis stream version must be 0.
-        if ($version['data'] == 0)
-            $this->_version = $version['data'];
+        if ($h['vorbis_version'] == 0)
+            $this->_version = $h['vorbis_version'];
         else
-            PEAR::raiseError("Stream is undecodable due to an invalid vorbis stream version.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new PEAR_Exception("Stream is undecodable due to an invalid vorbis stream version.", OGG_VORBIS_ERROR_UNDECODABLE);
     
-        // The number of channels is stored in an 8 bit unsigned integer,
-        // with a maximum of 255 channels.
-        $channels = unpack("Cdata", fread($this->_filePointer, 1));
         // The number of channels MUST be greater than 0.
-        if ($channels['data'] == 0)
-            PEAR::raiseError("Stream is undecodable due to zero channels.", OGG_VORBIS_ERROR_UNDECODABLE);
+        if ($h['audio_channels'] == 0)
+            throw new PEAR_Exception("Stream is undecodable due to zero channels.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
-            $this->_channels = $channels['data'];
+            $this->_channels = $h['audio_channels'];
     
-        // The sample rate is a 32 bit unsigned integer.
-        $sample_rate = unpack("Vdata", fread($this->_filePointer, 4));
         // The sample rate MUST be greater than 0.
-        if ($sample_rate['data'] == 0)
-            PEAR::raiseError("Stream is undecodable due to a zero sample rate.", OGG_VORBIS_ERROR_UNDECODABLE);
+        if ($h['audio_sample_rate'] == 0)
+            throw new PEAR_Exception("Stream is undecodable due to a zero sample rate.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
-            $this->_sampleRate = $sample_rate['data'];
+            $this->_sampleRate = $h['audio_sample_rate'];
     
-        // Extract the various bitrates from the vorbis stream.
-        $bitrate['max']     = unpack("Vdata", fread($this->_filePointer, 4));
-        $this->_maxBitrate  = $bitrate['max']['data'];
-        $bitrate['nom']     = unpack("Vdata", fread($this->_filePointer, 4));
-        $this->_nomBitrate  = $bitrate['nom']['data'];
-        $bitrate['min']     = unpack("Vdata", fread($this->_filePointer, 4));
-        $this->_minBitrate  = $bitrate['min']['data'];
-    
-        $blocksizes = unpack("Cdata", fread($this->_filePointer, 1));
+        // Extract the various bitrates
+        $this->_maxBitrate  = $h['bitrate_maximum'];
+        $this->_nomBitrate  = $h['bitrate_nominal'];
+        $this->_minBitrate  = $h['bitrate_minimum'];
     
         // Powers of two between 6 and 13 inclusive.
         $valid_block_sizes = array(64, 128, 256, 512, 1024, 2048, 4096, 8192);
     
-        // Extract bits 1 to 4 from the character data.
         // blocksize_0 MUST be a valid blocksize.
-        $blocksize_0 = pow(2, ($blocksizes['data'] & 0x0F));
+        $blocksize_0 = pow(2, $h['blocksize_0']);
         if (FALSE == in_array($blocksize_0, $valid_block_sizes))
-            PEAR::raiseError("Stream is undecodable because blocksize_0 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new PEAR_Exception("Stream is undecodable because blocksize_0 is $blocksize_0, which is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
     
         // Extract bits 5 to 8 from the character data.
         // blocksize_1 MUST be a valid blocksize.
-        $blocksize_1 = pow(2, ($blocksizes['data'] & 0xF0) >> 4);
+        $blocksize_1 = pow(2, $h['blocksize_1']);
         if (FALSE == in_array($blocksize_1, $valid_block_sizes))
-            PEAR::raiseError("Stream is undecodable because blocksize_1 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new PEAR_Exception("Stream is undecodable because blocksize_1 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
     
         // blocksize 0 MUST be less than or equal to blocksize 1.
         if ($blocksize_0 > $blocksize_1)
-            PEAR::raiseError("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.", OGG_VORBIS_ERROR_UNDECODABLE);
+            throw new PEAR_Exception("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.", OGG_VORBIS_ERROR_UNDECODABLE);
     
         // The framing bit MUST be set to mark the end of the identification header.
-        $framing_bit = unpack("Cdata", fread($this->_filePointer, 1));
-        if ($framing_bit['data'] == 0)
-            PEAR::raiseError("Stream in undecodable because the framing bit is not non-zero.", OGG_VORBIS_ERROR_UNDECODABLE);
+        // Some encoders are broken though -- TS
+        /*
+        if ($h['framing_flag'] == 0)
+            throw new PEAR_Exception("Stream in undecodable because the framing bit is not non-zero.", OGG_VORBIS_ERROR_UNDECODABLE);
+         */
+
+        $this->_idHeader = $h;
     }
-    
+
     /**
+     * Decode the comments header
      * @access  private
      * @param   int     $packetType
      * @param   int     $pageOffset
      */
-    function _decodeCommonHeader($packetType, $pageOffset)
+    function _decodeCommentsHeader($packetType, $pageOffset)
     {
-        fseek($this->_filePointer, $this->_streamList[$pageOffset]['body_offset'], SEEK_SET);
-        // Check if this is the correct header.
-        $packet = unpack("Cdata", fread($this->_filePointer, 1));
-        if ($packet['data'] != $packetType)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-    
-        // The following six characters should be the characters 'v', 'o', 'r', 'b', 'i', 's'.
-        if (fread($this->_filePointer, 6) != OGG_STREAM_CAPTURE_VORBIS)
-            PEAR::raiseError("Stream is undecodable due to a malformed header.", OGG_VORBIS_ERROR_UNDECODABLE);
-    }
-    
-    /**
-     * Encode a standard vorbis header.
-     *
-     * @access  private
-     * @param   int     $packetType
-     * @return  string
-     */
-    function _encodeCommonHeader($packetType) {
-        $header  = "";
-        $header .= pack("C", $packetType);
-        $header .= OGG_STREAM_CAPTURE_VORBIS;
-        return ($header);
-    }
-    
-    /**
-     * Parse the comments header (the second of three headers) of a Vorbis stream.
-     *
-     * This function parses the comments header.  The comments header contains a series of
-     * UTF-8 comments related to the audio encoded in the stream.  This header also contains
-     * a string to identify the encoding software.  More details on the comments header can
-     * be found at the following location.
-     *
-     * @access  private
-     */
-    function _decodeCommentsHeader()
-    {
-        $this->_decodeCommonHeader(OGG_VORBIS_COMMENTS_HEADER, OGG_VORBIS_COMMENTS_PAGE_OFFSET);
-            
-        // Decode the vendor string length as a 32-bit unsigned integer.
-        $vendor_len = unpack("Vdata", fread($this->_filePointer, 4));
-        // Retrieve the vendor string from the stream.
-        $this->_vendor  = fread($this->_filePointer, $vendor_len['data']);
-        // Decode the size of the comments list as a 32-bit unsigned integer.
-        $comment_list_length = unpack("Vdata", fread($this->_filePointer, 4));
-        // Iterate through the comments list.
-        for ($i = 0; $i < $comment_list_length['data']; ++$i) {
-            // Unpack the length of this comment.
-            $comment_length = unpack("Vdata", fread($this->_filePointer, 4));
-            // Comments are in the format 'ARTIST=Super Furry Animals', so split it on the equals character.
-            // NOTE: Equals characters are strictly prohibited in either the COMMENT or DATA parts.
-            $comment        = explode("=", fread($this->_filePointer, $comment_length['data']));
-            $comment_title  = (string) $comment[0];
-            $comment_value  = (string) utf8_decode($comment[1]);
-    
-            // Check if the comment type (e.g. ARTIST) already exists.  If it does,
-            // take the new value, and the existing value (or array) and insert it
-            // into a new array.  This is important, since each comment type may have
-            // multiple instances (e.g. ARTIST for a collaboration) and we should not
-            // overwrite the previous value.
-            if (isset($this->_comments[$comment_title])) {
-                if (is_array($this->_comments[$comment_title]))
-                    $this->_comments[$comment_title][] = $comment_value;
-                else
-                    $this->_comments[$comment_title] = array($this->_comments[$comment_title], $comment_value);
-            } else
-                $this->_comments[$comment_title] = $comment_value;
-        }
-    
+        $this->_decodeCommonHeader($packetType, $pageOffset);
+        $this->_decodeBareCommentsHeader();
         // The framing bit MUST be set to mark the end of the comments header.
         $framing_bit = unpack("Cdata", fread($this->_filePointer, 1));
         if ($framing_bit['data'] != 1)
-            PEAR::raiseError("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
-        $this->_original_comments_length = ftell($this->_filePointer) - $this->_streamList[OGG_VORBIS_COMMENTS_PAGE_OFFSET]['body_offset'];
-    }
-    
-    function _encodeCommentsHeader()
-    {
-        $header  = $this->_encodeCommonHeader(OGG_VORBIS_COMMENTS_HEADER);
-        $header .= pack("V", strlen($this->_vendor));
-        $header .= $this->_vendor;
-        $cmts    = 0;
-        foreach ($this->_comments as $comment) {
-            if (is_array($comment))
-                $cmts += count($comment);
-            else
-                ++$cmts;
-        }
-        // Pack the length of comments.
-        $header .= pack("V", $cmts);
-        // Iterate through the comments, and pack them into the stream.
-        foreach ($this->_comments as $title => $comment) {
-            // This comment has two or greater values.
-            if (is_array($comment)) {
-                foreach ($comment as $offset => $s_comment)
-                    $header .= $this->_packComment($title, $s_comment);
-            } else
-                $header .= $this->_packComment($title, $comment);
-        }
-        // Pack the framing bit.
-        $header .= pack("C", 1);
-        
-        return ($header);
-    }
-    
-    /**
-     * Pack a comment into binary format.
-     *
-     * @access  private
-     * @param   string  $title
-     * @param   string  $value
-     * @return  string
-     */
-    function _packComment($title, $value)
-    {
-        $header  = "";
-        $value   = utf8_encode($value);
-        $comment = $title . "=" . $value;
-        $header .= pack("V", strlen($comment));
-        $header .= $comment;
-        return $header;
-    }
-    
-    /**
-     * Provides a list of the comments extracted from the Vorbis stream.
-     *
-     * It is recommended that the user fully inspect the array returned by this function
-     * rather than blindly requesting a comment in false belief that it will always
-     * be present.  Whilst the Vorbis specification dictates a number of popular
-     * comments (e.g. TITLE, ARTIST, etc.) for use in Vorbis streams, they are not
-     * guaranteed to appear.
-     *
-     * @access  public
-     * @return  array
-     */
-    function getCommentList()
-    {
-        return (array_keys($this->_comments));
+            throw new PEAR_Exception("Stream Undecodable", OGG_VORBIS_ERROR_UNDECODABLE);
     }
 
     /**
-     * Provides an interface to the numerous comments located with a Vorbis stream.
-     *
-     * A Vorbis stream may contain one or more instances of each comment, so the user
-     * should check the variable type before printing out the result of this method.
-     * The situation in which multiple instances of a comment occurring are not as
-     * rare as one might think, since they are conceivable at least for ARTIST comments
-     * in the situation where a track is a duet.
-     *
-     * @access  public
-     * @param   string  $commentTitle   Comment title to search for, e.g. TITLE.
-     * @param   string  $separator      String to separate multiple values.
-     * @return  string
+     * Get the 6-byte identification string expected in the common header
      */
-    function getField($commentTitle, $separator = ", ")
-    {
-    if (isset($this->_comments[$commentTitle])) {
-        if (is_array($this->_comments[$commentTitle]))
-            return (implode($separator, $this->_comments[$commentTitle]));
-        else
-            return ($this->_comments[$commentTitle]);
-    } else
-        // The comment doesn't exist in this file.  The user should've called getCommentList first.
-        return ("");
+    function getIdentificationString() {
+        return OGG_STREAM_CAPTURE_VORBIS;
     }
     
-    /**
-     * Set a field for this stream's meta description.
-     *
-     * @access  public
-     * @param   string  $field
-     * @param   mixed   $value
-     * @param   boolean $replace
-     */
-    function setField($field, $value, $replace = true)
-    {
-        if (strpos($field, "=") !== false)
-            return PEAR::raiseError("Comments must not contain equals signs.", OGG_VORBIS_ERROR_ILLEGAL_COMMENT);
-        if (strpos($value, "=") !== false)
-            return PEAR::raiseError("Comments must not contain equals signs.", OGG_VORBIS_ERROR_ILLEGAL_COMMENT);
-
-        if ($replace || ! isset($this->_comments[$field])) {
-            $this->_comments[$field] = $value;
-        } else {
-            if (is_array($this->_comments[$field])) 
-                $this->_comments[$field][] = $value;
-            else
-                $this->_comments[$field] = array($this->_comments[$field], $value);
-        }
-    }
-
     /**
      * Version of the Vorbis specification referred to in the encoding of this stream.
      *
@@ -537,21 +296,6 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function getEncoderVersion()
     {
         return ($this->_version);
-    }
-
-    /**
-     * Vendor of software used to encode this stream.
-     *
-     * Gives the vendor string for the software used to encode this stream.
-     * It is common to find libVorbis here.  The majority of encoders appear
-     * to use libvorbis from Xiph.org.
-     *
-     * @access  public
-     * @return  string
-     */
-    function getVendor()
-    {
-        return ($this->_vendor);
     }
 
     /**
@@ -1028,6 +772,15 @@ class File_Ogg_Vorbis extends File_Ogg_Bitstream
     function setIsrc($isrc, $replace = true)
     {
         $this->setField("ISRC", $isrc, $replace);
+    }
+
+    /**
+     * Get an associative array containing header information about the stream
+     * @access  public
+     * @return  array
+     */
+    function getHeader() {
+        return $this->_idHeader;
     }
 }
 ?>
