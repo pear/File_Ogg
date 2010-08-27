@@ -38,16 +38,29 @@ class File_Ogg_Speex extends File_Ogg_Media
     /**
      * @access  private
      */
-    function File_Ogg_Speex($streamSerial, $streamData, $filePointer)
+    function __construct($streamSerial, $streamData, $filePointer)
     {
         parent::__construct($streamSerial, $streamData, $filePointer);
         $this->_decodeHeader();
         $this->_decodeCommentsHeader();
-        $this->_streamLength    = 
+        $endSec =
             (( '0x' . substr( $this->_lastGranulePos, 0, 8 ) ) * pow(2, 32) 
             + ( '0x' . substr( $this->_lastGranulePos, 8, 8 ) ))
             / $this->_header['rate'];
-    }
+     
+         $startSec	 =        
+            (( '0x' . substr( $this->_firstGranulePos, 0, 8 ) ) * pow(2, 32) 
+            + ( '0x' . substr( $this->_firstGranulePos, 8, 8 ) ))
+            / $this->_header['rate'];
+            
+         //make sure the offset is worth taking into account oggz_chop related hack
+	    if( $startSec > 1){
+            $this->_streamLength = $endSec - $startSec;
+            $this->_startOffset = $startSec;
+	    }else{
+            $this->_streamLength = $endSec;
+	    }
+      }
 
     /**
      * Get a short string describing the type of the stream
@@ -64,7 +77,7 @@ class File_Ogg_Speex extends File_Ogg_Media
      */
     function _decodeHeader()
     {
-        fseek($this->_filePointer, $this->_streamList[0]['body_offset'], SEEK_SET);
+        fseek($this->_filePointer, $this->_streamData['pages'][0]['body_offset'], SEEK_SET);
         // The first 8 characters should be "Speex   ".
         if (fread($this->_filePointer, 8) != 'Speex   ')
             throw new PEAR_Exception("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
@@ -103,7 +116,7 @@ class File_Ogg_Speex extends File_Ogg_Media
      */
     function _decodeCommentsHeader()
     {
-        fseek($this->_filePointer, $this->_streamList[1]['body_offset'], SEEK_SET);
+        fseek($this->_filePointer, $this->_streamData['pages'][1]['body_offset'], SEEK_SET);
         $this->_decodeBareCommentsHeader();
     }
 }

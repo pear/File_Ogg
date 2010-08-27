@@ -25,32 +25,32 @@ require_once('File/Ogg/Bitstream.php');
 
 /**
  * Check number for the first header in a Vorbis stream.
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_IDENTIFICATION_HEADER",  1);
 /**
  * Check number for the second header in a Vorbis stream.
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_COMMENTS_HEADER",        3);
 /**
  * Check number for the third header in a Vorbis stream.
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_SETUP_HEADER",           5);
 /**
  * Error thrown if the stream appears to be corrupted.
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_ERROR_UNDECODABLE",      OGG_ERROR_UNDECODABLE);
 /**
  * Error thrown if the user attempts to extract a comment using a comment key
  * that does not exist.
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_ERROR_INVALID_COMMENT",  2);
@@ -61,7 +61,7 @@ define("OGG_VORBIS_COMMENTS_PAGE_OFFSET",       1);
 /**
  * Error thrown if the user attempts to write a comment containing an illegal
  * character
- * 
+ *
  * @access  private
  */
 define("OGG_VORBIS_ERROR_ILLEGAL_COMMENT",  3);
@@ -149,8 +149,11 @@ class File_Ogg_Vorbis extends File_Ogg_Media
      * @var     int
      */
     var $_streamLength;
-    
 
+    /**
+     * the start offset of this stream in seconds
+     */
+    var $_startOffset;
     /**
      * Constructor for accessing a Vorbis logical stream.
      *
@@ -163,24 +166,36 @@ class File_Ogg_Vorbis extends File_Ogg_Media
      * @param   pointer $filePointer    File pointer for the current physical stream.
      * @access  private
      */
-    function File_Ogg_Vorbis($streamSerial, $streamData, $filePointer)
+    function __construct($streamSerial, $streamData, $filePointer)
     {
-        File_Ogg_Bitstream::File_Ogg_Bitstream($streamSerial, $streamData, $filePointer);
+        parent::__construct($streamSerial, $streamData, $filePointer);
         $this->_decodeIdentificationHeader();
         $this->_decodeCommentsHeader(OGG_VORBIS_COMMENTS_HEADER, OGG_VORBIS_COMMENTS_PAGE_OFFSET);
-        $this->_streamLength    = 
-            (( '0x' . substr( $this->_lastGranulePos, 0, 8 ) ) * pow(2, 32) 
-            + ( '0x' . substr( $this->_lastGranulePos, 8, 8 ) ))
-            / $this->_idHeader['audio_sample_rate'];
+
+        $endSec =  $this->getSecondsFromGranulePos( $this->_lastGranulePos );
+	    $startSec = $this->getSecondsFromGranulePos( $this->_firstGranulePos );
+
+		//make sure the offset is worth taking into account oggz_chop related hack
+	    if( $startSec > 1){
+            $this->_streamLength = $endSec - $startSec;
+            $this->_startOffset = $startSec;
+	    }else{
+            $this->_streamLength = $endSec;
+	    }
+
         $this->_avgBitrate      = $this->_streamLength ? ($this->_streamSize * 8) / $this->_streamLength : 0;
     }
-
+	function getSecondsFromGranulePos( $granulePos ){
+		return (( '0x' . substr( $granulePos, 0, 8 ) ) * pow(2, 32)
+            + ( '0x' . substr( $granulePos, 8, 8 ) ))
+            / $this->_idHeader['audio_sample_rate'];
+	}
     /**
      * Get a short string describing the type of the stream
      */
-    function getType() 
+    function getType()
     {
-        return 'Vorbis'; 
+        return 'Vorbis';
     }
 
     /**
@@ -214,42 +229,42 @@ class File_Ogg_Vorbis extends File_Ogg_Media
             $this->_version = $h['vorbis_version'];
         else
             throw new PEAR_Exception("Stream is undecodable due to an invalid vorbis stream version.", OGG_VORBIS_ERROR_UNDECODABLE);
-    
+
         // The number of channels MUST be greater than 0.
         if ($h['audio_channels'] == 0)
             throw new PEAR_Exception("Stream is undecodable due to zero channels.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
             $this->_channels = $h['audio_channels'];
-    
+
         // The sample rate MUST be greater than 0.
         if ($h['audio_sample_rate'] == 0)
             throw new PEAR_Exception("Stream is undecodable due to a zero sample rate.", OGG_VORBIS_ERROR_UNDECODABLE);
         else
             $this->_sampleRate = $h['audio_sample_rate'];
-    
+
         // Extract the various bitrates
         $this->_maxBitrate  = $h['bitrate_maximum'];
         $this->_nomBitrate  = $h['bitrate_nominal'];
         $this->_minBitrate  = $h['bitrate_minimum'];
-    
+
         // Powers of two between 6 and 13 inclusive.
         $valid_block_sizes = array(64, 128, 256, 512, 1024, 2048, 4096, 8192);
-    
+
         // blocksize_0 MUST be a valid blocksize.
         $blocksize_0 = pow(2, $h['blocksize_0']);
         if (FALSE == in_array($blocksize_0, $valid_block_sizes))
             throw new PEAR_Exception("Stream is undecodable because blocksize_0 is $blocksize_0, which is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
-    
+
         // Extract bits 5 to 8 from the character data.
         // blocksize_1 MUST be a valid blocksize.
         $blocksize_1 = pow(2, $h['blocksize_1']);
         if (FALSE == in_array($blocksize_1, $valid_block_sizes))
             throw new PEAR_Exception("Stream is undecodable because blocksize_1 is not a valid size.", OGG_VORBIS_ERROR_UNDECODABLE);
-    
+
         // blocksize 0 MUST be less than or equal to blocksize 1.
         if ($blocksize_0 > $blocksize_1)
             throw new PEAR_Exception("Stream is undecodable because blocksize_0 is not less than or equal to blocksize_1.", OGG_VORBIS_ERROR_UNDECODABLE);
-    
+
         // The framing bit MUST be set to mark the end of the identification header.
         // Some encoders are broken though -- TS
         /*
@@ -282,7 +297,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     function getIdentificationString() {
         return OGG_STREAM_CAPTURE_VORBIS;
     }
-    
+
     /**
      * Version of the Vorbis specification referred to in the encoding of this stream.
      *
@@ -373,7 +388,14 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->_streamLength);
     }
-    
+ 	/**
+     * Get the start offset of the stream in seconds
+     * @access public
+     * @return int
+     */
+    function getStartOffset(){
+    	return ($this->_startOffset);
+    }
     /**
      * States whether this logical stream was encoded in mono.
      *
@@ -384,7 +406,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->_channels == 1);
     }
-    
+
     /**
      * States whether this logical stream was encoded in stereo.
      *
@@ -395,7 +417,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->_channels == 2);
     }
-    
+
     /**
      * States whether this logical stream was encoded in quadrophonic sound.
      *
@@ -406,7 +428,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->_channels == 4);
     }
-    
+
     /**
      * The title of this track, e.g. "What's Up Pussycat?".
      *
@@ -417,7 +439,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("TITLE"));
     }
-    
+
     /**
      * Set the title of this track.
      *
@@ -429,7 +451,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("TITLE", $title, $replace);
     }
-    
+
     /**
      * The version of the track, such as a remix.
      *
@@ -440,7 +462,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return $this->getField("VERSION");
     }
-    
+
     /**
      * Set the version of this track.
      *
@@ -452,7 +474,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("VERSION", $version, $replace);
     }
-    
+
     /**
      * The album or collection from which this track comes.
      *
@@ -463,7 +485,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("ALBUM"));
     }
-    
+
     /**
      * Set the album or collection for this track.
      *
@@ -475,7 +497,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("ALBUM", $album, $replace);
     }
-    
+
     /**
      * The number of this track if it is part of a larger collection.
      *
@@ -486,7 +508,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("TRACKNUMBER"));
     }
-    
+
     /**
      * Set the number of this relative to the collection.
      *
@@ -498,7 +520,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("TRACKNUMBER", $number, $replace);
     }
-    
+
     /**
      * The artist responsible for this track.
      *
@@ -512,7 +534,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("ARTIST"));
     }
-    
+
     /**
      * Set the artist of this track.
      *
@@ -524,7 +546,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("ARTIST", $artist, $replace = true);
     }
-    
+
     /**
      * The performer of this track, such as an orchestra
      *
@@ -535,7 +557,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("PERFORMER"));
     }
-    
+
     /**
      * Set the performer of this track.
      *
@@ -547,7 +569,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("PERFORMER", $performer, $replace);
     }
-    
+
     /**
      * The copyright attribution for this track.
      *
@@ -558,7 +580,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("COPYRIGHT"));
     }
-    
+
     /**
      * Set the copyright attribution for this track.
      *
@@ -570,7 +592,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("COPYRIGHT", $copyright, $replace);
     }
-    
+
     /**
      * The rights of distribution for this track.
      *
@@ -584,7 +606,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("LICENSE"));
     }
-    
+
     /**
      * Set the distribution rights for this track.
      *
@@ -596,11 +618,11 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("LICENSE", $license, $replace);
     }
-    
+
     /**
      * The organisation responsible for this track.
      *
-     * This function returns the name of the organisation responsible for 
+     * This function returns the name of the organisation responsible for
      * the production of this track, such as the record label.
      *
      * @access  public
@@ -610,7 +632,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("ORGANIZATION"));
     }
-    
+
     /**
      * Set the organisation responsible for this track.
      *
@@ -622,7 +644,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("ORGANIZATION", $organization, $replace);
     }
-    
+
     /**
      * A short description of the contents of this track.
      *
@@ -636,7 +658,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("DESCRIPTION"));
     }
-    
+
     /**
      * Set the description of this track.
      *
@@ -648,7 +670,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("DESCRIPTION", $replace);
     }
-    
+
     /**
      * The genre of this recording (e.g. Rock)
      *
@@ -662,7 +684,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("GENRE"));
     }
-    
+
     /**
      * Set the genre of this track.
      *
@@ -674,7 +696,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("GENRE", $genre, $replace);
     }
-    
+
     /**
      * The date of the recording of this track.
      *
@@ -688,7 +710,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("DATE"));
     }
-    
+
     /**
      * Set the date of recording for this track.
      *
@@ -700,7 +722,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("DATE", $date, $replace);
     }
-    
+
     /**
      * Where this recording was made.
      *
@@ -714,7 +736,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("LOCATION"));
     }
-    
+
     /**
      * Set the location of the recording of this track.
      *
@@ -726,7 +748,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("LOCATION", $location, $replace);
     }
-    
+
     /**
      * @access  public
      * @return  string
@@ -735,7 +757,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("CONTACT"));
     }
-    
+
     /**
      * Set the contact information for this track.
      *
@@ -747,7 +769,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         $this->setField("CONTACT", $contact, $replace);
     }
-    
+
     /**
      * International Standard Recording Code.
      *
@@ -761,7 +783,7 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->getField("ISRC"));
     }
-    
+
     /**
      *  Set the ISRC for this track.
      *

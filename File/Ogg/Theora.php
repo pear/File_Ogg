@@ -44,32 +44,44 @@ class File_Ogg_Theora extends File_Ogg_Media
     /**
      * @access  private
      */
-    function File_Ogg_Theora($streamSerial, $streamData, $filePointer)
+    function __construct($streamSerial, $streamData, $filePointer)
     {
-        File_Ogg_Media::File_Ogg_Media($streamSerial, $streamData, $filePointer);
+        parent::__construct($streamSerial, $streamData, $filePointer);
         $this->_decodeIdentificationHeader();
         $this->_decodeCommentsHeader();
+      	$endSec = $this->getSecondsFromGranulePos( $this->_lastGranulePos );
 
-        // Calculate length
+        $startSec =  $this->getSecondsFromGranulePos( $this->_firstGranulePos );
+
+        //make sure the offset is worth taking into account oggz_chop related hack
+	    if( $startSec > 1){
+            $this->_streamLength = $endSec - $startSec;
+            $this->_startOffset = $startSec;
+	    }else{
+            $this->_streamLength = $endSec;
+	    }
+
+        $this->_avgBitrate = $this->_streamLength ? ($this->_streamSize * 8) / $this->_streamLength : 0;
+    }
+	function getSecondsFromGranulePos($granulePos){
+		// Calculate GranulePos seconds
         // First make some "numeric strings"
-        // These might not fit into PHP's integer type, but they will fit into 
+        // These might not fit into PHP's integer type, but they will fit into
         // the 53-bit mantissa of a double-precision number
-        $topWord = floatval( '0x' . substr( $this->_lastGranulePos, 0, 8 ) );
-        $bottomWord = floatval( '0x' . substr( $this->_lastGranulePos, 8, 8 ) );
+        $topWord = floatval( base_convert( substr( $granulePos, 0, 8 ), 16, 10 ) );
+        $bottomWord = floatval( base_convert( substr( $granulePos, 8, 8 ), 16, 10 ) );
         // Calculate the keyframe position by shifting right by KFGSHIFT
         // We don't use PHP's shift operators because they're terribly broken
         // This is made slightly simpler by the fact that KFGSHIFT < 32
-        $keyFramePos = $topWord / pow(2, $this->_kfgShift - 32) + 
+        $keyFramePos = $topWord / pow(2, $this->_kfgShift - 32) +
             floor( $bottomWord / pow(2, $this->_kfgShift) );
         // Calculate the frame offset by masking off the top 64-KFGSHIFT bits
         // This requires a bit of floating point trickery
         $offset = fmod( $bottomWord, pow(2, $this->_kfgShift) );
         // They didn't teach you that one at school did they?
-        // Now put it together with the frame rate to calculate length in seconds
-        $this->_streamLength = ( $keyFramePos + $offset ) / $this->_frameRate;
-        $this->_avgBitrate = $this->_streamLength ? ($this->_streamSize * 8) / $this->_streamLength : 0;
-    }
-
+        // Now put it together with the frame rate to calculate time in seconds
+       	return  ( $keyFramePos + $offset ) / $this->_frameRate;
+	}
     /**
      * Get the 6-byte identification string expected in the common header
      */
@@ -122,7 +134,7 @@ class File_Ogg_Theora extends File_Ogg_Media
         }
         $this->_frameWidth = $h['FMBW'] * 16;
         $this->_frameHeight = $h['FMBH'] * 16;
-        
+
         // Picture height/width
         if ( $h['PICW'] > $this->_frameWidth || $h['PICH'] > $this->_frameHeight ) {
             throw new PEAR_Exception("Stream is undecodable because the picture width is greater than the frame width.", OGG_ERROR_UNDECODABLE);
@@ -158,7 +170,7 @@ class File_Ogg_Theora extends File_Ogg_Media
 
         $this->_quality = $h['QUAL'];
         $this->_kfgShift = $h['KFGSHIFT'];
-        
+
         $pixelFormats = array(
             0 => '4:2:0',
             1 => 'Unknown (reserved)',
@@ -168,25 +180,25 @@ class File_Ogg_Theora extends File_Ogg_Media
         $this->_pixelFormat = $pixelFormats[$h['PF']];
 
         switch ( $h['PF'] ) {
-            case 0: 
-                $h['NSBS'] = 
-                    floor( ($h['FMBW'] + 1) / 2 ) * 
-                    floor( ($h['FMBH'] + 1) / 2 ) + 2 * 
-                    floor( ($h['FMBW'] + 3) / 4 ) * 
+            case 0:
+                $h['NSBS'] =
+                    floor( ($h['FMBW'] + 1) / 2 ) *
+                    floor( ($h['FMBH'] + 1) / 2 ) + 2 *
+                    floor( ($h['FMBW'] + 3) / 4 ) *
                     floor( ($h['FMBH'] + 3) / 4 );
                 $h['NBS'] = 6 * $h['FMBW'] * $h['FMBH'];
                 break;
             case 2:
-                $h['NSBS'] = 
-                    floor( ($h['FMBW'] + 1) / 2 ) * 
-                    floor( ($h['FMBH'] + 1) / 2 ) + 2 * 
-                    floor( ($h['FMBW'] + 3) / 4 ) * 
+                $h['NSBS'] =
+                    floor( ($h['FMBW'] + 1) / 2 ) *
+                    floor( ($h['FMBH'] + 1) / 2 ) + 2 *
+                    floor( ($h['FMBW'] + 3) / 4 ) *
                     floor( ($h['FMBH'] + 1) / 2 );
                 $h['NBS'] = 8 * $h['FMBW'] * $h['FMBH'];
                 break;
             case 3:
-                $h['NSBS'] = 
-                    3 * floor( ($h['FMBW'] + 1) / 2 ) * 
+                $h['NSBS'] =
+                    3 * floor( ($h['FMBW'] + 1) / 2 ) *
                         floor( ($h['FMBH'] + 1) / 2 );
                 $h['NBS'] = 12 * $h['FMBW'] * $h['FMBH'];
                 break;
