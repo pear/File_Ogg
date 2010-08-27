@@ -13,26 +13,23 @@ NOT provide codecs for these formats.
   <email>tstarling@wikimedia.org</email>
   <active>yes</active>
  </lead>
- <date>2008-01-31</date>
- <time>15:25:07</time>
+ <date>2010-08-27</date>
+ <time>12:24:21</time>
  <version>
-  <release>0.3.0</release>
-  <api>0.3.0</api>
+  <release>0.3.1</release>
+  <api>0.3.1</api>
  </version>
  <stability>
   <release>beta</release>
   <api>beta</api>
  </stability>
  <license>GNU LGPL</license>
- <notes>* Change in maintainership
-* Added header parsing for Theora, Speex and Flac. 
-* Removed partially written save/encode code. 
-* Introduced some PHP 5 features, no longer supports PHP 4.
-* Introduced convenience functions getHeader() and getComments() to retrieve metadata in associative array format. 
-* Fixed the error handling, using exceptions instead of inappropriate continuation. 
-* Added overall length calculation for multiplexed streams
-* Fixed a page splitting bug
-        
+ <notes>* Updated to the version in MediaWiki trunk r71623
+* Fixed bug in theora length calculation (was always zero)
+* Updated to handle oggz_chop files
+* Provide access to stream offset time
+* Optimised memory usage, should now be able to process arbitrarily large files
+
  </notes>
  <contents>
   <dir name="/">
@@ -61,6 +58,29 @@ NOT provide codecs for these formats.
  </dependencies>
  <phprelease />
  <changelog>
+  <release>
+   <version>
+    <release>0.3.0</release>
+    <api>0.3.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <date>2008-01-31</date>
+   <license>GNU LGPL</license>
+   <notes>* Change in maintainership
+* Added header parsing for Theora, Speex and Flac. 
+* Removed partially written save/encode code. 
+* Introduced some PHP 5 features, no longer supports PHP 4.
+* Introduced convenience functions getHeader() and getComments() to retrieve metadata in associative array format. 
+* Fixed the error handling, using exceptions instead of inappropriate continuation. 
+* Added overall length calculation for multiplexed streams
+* Fixed a page splitting bug
+        
+   </notes>
+
+  </release>
   <release>
    <version>
     <release>0.2.1</release>
