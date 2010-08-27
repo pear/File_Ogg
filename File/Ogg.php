@@ -50,7 +50,7 @@ define("OGG_STREAM_FLAC",       4);
 
 /**
  * Capture pattern to determine if a file is an Ogg physical stream.
- * 
+ *
  * @access  private
  */
 define("OGG_CAPTURE_PATTERN", "OggS");
