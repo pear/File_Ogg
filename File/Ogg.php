@@ -505,7 +505,7 @@ class File_Ogg
                 }
                 //just store the startOffset for the first stream:
                 if( $this->_startOffset === false ){
-                	$this->_startOffset = $stream->getStartOffset();
+                    $this->_startOffset = $stream->getStartOffset();
                 }
 
             }
@@ -620,16 +620,19 @@ class File_Ogg
         else
             return array();
     }
+
     /**
      * getStartOffset
      *
      * @return unknown
      */
-	function getStartOffset(){
-		if( $this->_startOffset === false)
-			return 0;
-		return $this->_startOffset;
-	}
+    function getStartOffset(){
+        if ($this->_startOffset === false) {
+            return 0;
+        }
+        return $this->_startOffset;
+    }
+
     /**
      * Get the total length of the group of streams
      */
@@ -637,4 +640,3 @@ class File_Ogg
         return $this->_totalLength;
     }
 }
-?>
