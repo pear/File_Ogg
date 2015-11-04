@@ -23,9 +23,10 @@
     },
     "type": "library",
     "require": {
-        "pear/pear_exception": "*"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "*"
-    }
+        "pear/pear_exception": "*",
+		"phpunit/phpunit": "~4.8.16"
+	},
+	"scripts": {
+		"test": "phpunit"
+	}
 }
