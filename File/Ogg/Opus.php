@@ -82,7 +82,7 @@ class File_Ogg_Opus extends File_Ogg_Media
         fseek($this->_filePointer, $this->_streamData['pages'][0]['body_offset'], SEEK_SET);
         // The first 8 characters should be "OpusHead".
         if (fread($this->_filePointer, 8) != 'OpusHead')
-            throw new PEAR_Exception("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
+            throw new OggException("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
 
         $this->_header = File_Ogg::_readLittleEndian($this->_filePointer, array(
             'opus_version'          => 8,
@@ -120,7 +120,7 @@ class File_Ogg_Opus extends File_Ogg_Media
         $id = 'OpusTags';
         $this->_decodeCommonHeader(false, OGG_OPUS_COMMENTS_PAGE_OFFSET);
         if(fread($this->_filePointer, strlen($id)) !== $id)
-            throw new PEAR_Exception("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
+            throw new OggException("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
         $this->_decodeBareCommentsHeader();
     }
 }
