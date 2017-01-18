@@ -80,7 +80,7 @@ class File_Ogg_Speex extends File_Ogg_Media
         fseek($this->_filePointer, $this->_streamData['pages'][0]['body_offset'], SEEK_SET);
         // The first 8 characters should be "Speex   ".
         if (fread($this->_filePointer, 8) != 'Speex   ')
-            throw new PEAR_Exception("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
+            throw new OggException("Stream is undecodable due to a malformed header.", OGG_ERROR_UNDECODABLE);
 
         $this->_version = fread($this->_filePointer, 20);
         $this->_header = File_Ogg::_readLittleEndian($this->_filePointer, array(
