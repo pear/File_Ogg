@@ -1,7 +1,10 @@
 language: php
 install:
   - pear install package.xml
+  - travis_retry composer install --no-interaction --prefer-source
 php:
   - 5.4
 sudo: false
-script: phpunit tests/
+
+script:
+  - composer test
