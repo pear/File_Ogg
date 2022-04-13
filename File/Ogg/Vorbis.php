@@ -81,7 +81,6 @@ define("OGG_VORBIS_ERROR_ILLEGAL_COMMENT",  3);
  * @link        http://pear.php.net/package/File_Ogg
  * @link        http://www.xiph.org/vorbis/doc/
  * @package     File_Ogg
- * @version     CVS: $Id$
  */
 class File_Ogg_Vorbis extends File_Ogg_Media
 {
