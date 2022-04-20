@@ -37,7 +37,6 @@ define( 'OGG_THEORA_COMMENTS_PAGE_OFFSET', 1 );
  * @link        http://pear.php.net/package/File_Ogg
  * @link        http://www.xiph.org/theora/
  * @package     File_Ogg
- * @version     CVS: $Id$
  */
 class File_Ogg_Theora extends File_Ogg_Media
 {

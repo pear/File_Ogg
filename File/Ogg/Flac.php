@@ -31,7 +31,6 @@ require_once('File/Ogg/Media.php');
  * @link        http://pear.php.net/package/File_Ogg
  * @link        http://flac.sourceforge.net/documentation.html
  * @package     File_Ogg
- * @version     CVS: $Id$
  */
 class File_Ogg_Flac extends File_Ogg_Media
 {

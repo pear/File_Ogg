@@ -31,7 +31,6 @@ require_once('File/Ogg/Media.php');
  * @link        http://pear.php.net/package/File_Ogg
  * @link        http://www.speex.org/docs.html
  * @package     File_Ogg
- * @version     CVS: $Id$
  */
 class File_Ogg_Speex extends File_Ogg_Media
 {
