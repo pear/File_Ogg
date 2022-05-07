@@ -235,7 +235,6 @@ class File_Ogg
         return $reversed;
     }
 
-
     /**
      * Read a binary structure from a file. An array of unsigned integers are read.
      * Large integers are upgraded to floating point on overflow.
@@ -360,7 +359,6 @@ class File_Ogg
         }
         return $output;
     }
-
 
     /**
      * @access  private

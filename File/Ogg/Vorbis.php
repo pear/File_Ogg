@@ -161,7 +161,6 @@ class File_Ogg_Vorbis extends File_Ogg_Media
      *
      * @param   int     $streamSerial   Serial number of the logical stream.
      * @param   array   $streamData     Data for the requested logical stream.
-     * @param   string  $filePath       Location of a file on the filesystem.
      * @param   pointer $filePointer    File pointer for the current physical stream.
      * @access  private
      */
@@ -172,23 +171,25 @@ class File_Ogg_Vorbis extends File_Ogg_Media
         $this->_decodeCommentsHeader(OGG_VORBIS_COMMENTS_HEADER, OGG_VORBIS_COMMENTS_PAGE_OFFSET);
 
         $endSec =  $this->getSecondsFromGranulePos( $this->_lastGranulePos );
-	    $startSec = $this->getSecondsFromGranulePos( $this->_firstGranulePos );
+        $startSec = $this->getSecondsFromGranulePos( $this->_firstGranulePos );
 
-		//make sure the offset is worth taking into account oggz_chop related hack
-	    if( $startSec > 1){
+        //make sure the offset is worth taking into account oggz_chop related hack
+        if( $startSec > 1){
             $this->_streamLength = $endSec - $startSec;
             $this->_startOffset = $startSec;
-	    }else{
+        }else{
             $this->_streamLength = $endSec;
-	    }
+        }
 
         $this->_avgBitrate      = $this->_streamLength ? ($this->_streamSize * 8) / $this->_streamLength : 0;
     }
-	function getSecondsFromGranulePos( $granulePos ){
-		return (intval(substr( $granulePos, 0, 8 ), 16) * pow(2, 32)
+
+    function getSecondsFromGranulePos( $granulePos ){
+        return (intval(substr( $granulePos, 0, 8 ), 16) * pow(2, 32)
             + intval( substr( $granulePos, 8, 8 ), 16 ))
             / $this->_idHeader['audio_sample_rate'];
-	}
+    }
+
     /**
      * Get a short string describing the type of the stream
      */
@@ -370,13 +371,13 @@ class File_Ogg_Vorbis extends File_Ogg_Media
     {
         return ($this->_streamLength);
     }
- 	/**
+    /**
      * Get the start offset of the stream in seconds
      * @access public
      * @return int
      */
     function getStartOffset(){
-    	return ($this->_startOffset);
+        return ($this->_startOffset);
     }
     /**
      * States whether this logical stream was encoded in mono.
@@ -787,4 +788,4 @@ class File_Ogg_Vorbis extends File_Ogg_Media
         return $this->_idHeader;
     }
 }
-?>
+
