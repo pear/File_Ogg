@@ -124,4 +124,3 @@ class File_Ogg_Opus extends File_Ogg_Media
         $this->_decodeBareCommentsHeader();
     }
 }
-?>
